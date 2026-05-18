@@ -5,7 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="1.3.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ContextOS.Core\ContextOS.Core.csproj" />
+    <ProjectReference Include="..\ContextOS.Storage\ContextOS.Storage.csproj" />
+    <ProjectReference Include="..\ContextOS.Embeddings\ContextOS.Embeddings.csproj" />
+    <ProjectReference Include="..\ContextOS.Retrieval\ContextOS.Retrieval.csproj" />
   </ItemGroup>
 
 </Project>
