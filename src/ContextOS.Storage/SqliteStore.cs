@@ -1,3 +1,4 @@
+using ContextOS.Core;
 using Microsoft.Data.Sqlite;
 
 namespace ContextOS.Storage;
@@ -6,7 +7,7 @@ namespace ContextOS.Storage;
 /// Persists and retrieves memories for a single workspace database.
 /// One instance owns one SQLite connection; use <see cref="OpenAsync"/> to create.
 /// </summary>
-public sealed class SqliteStore : IAsyncDisposable
+public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
 {
     private readonly SqliteConnection _conn;
 

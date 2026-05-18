@@ -1,4 +1,4 @@
-namespace ContextOS.Storage;
+namespace ContextOS.Core;
 
 /// <summary>A stored engineering memory entry.</summary>
 public record Memory(
