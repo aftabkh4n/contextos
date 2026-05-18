@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# ContextOS: ONNX model files are large and fetched by scripts/fetch-model.sh
+src/ContextOS.Embeddings/Models/*.onnx
