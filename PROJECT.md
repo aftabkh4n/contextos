@@ -99,7 +99,8 @@ CREATE TABLE memories (
   tags          TEXT,
   importance    REAL NOT NULL DEFAULT 0.5,
   created_at    INTEGER NOT NULL,
-  archived_at   INTEGER
+  archived_at   INTEGER,
+  embedding     BLOB
 );
 
 CREATE INDEX idx_memories_workspace_created ON memories(workspace_id, created_at DESC);
@@ -107,10 +108,6 @@ CREATE INDEX idx_memories_type ON memories(workspace_id, type);
 
 CREATE VIRTUAL TABLE memories_fts USING fts5(
   content, tags, content=memories, content_rowid=rowid
-);
-
-CREATE VIRTUAL TABLE memories_vec USING vec0(
-  embedding float[384]
 );
 
 CREATE TABLE hydration_log (
@@ -171,7 +168,7 @@ The blob must be under 2 KB. Log to `hydration_log` so we never double-inject fo
 ## 7. Retrieval pipeline
 
 1. Embed query via current provider.
-2. Vector top-20 from `memories_vec`.
+2. Vector top-20: cosine similarity over the `memories.embedding` BLOB column, computed in memory. Full scan; revisit with an index if workspace exceeds ~50k memories.
 3. FTS5 top-20 from `memories_fts`.
 4. Merge via Reciprocal Rank Fusion, constant = 60.
 5. Rerank: `final_score = rrf_score * exp(-age_days / 30) * (0.5 + importance)`.
