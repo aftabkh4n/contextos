@@ -17,20 +17,42 @@ string workspaceId = ComputeWorkspaceId(workspaceRoot);
 string workspaceName = Path.GetFileName(workspaceRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                        ?? workspaceId;
 
-string dbDir = Path.Combine(
+string dbPath = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-    ".contextos");
-string dbPath = Path.Combine(dbDir, $"{workspaceId}.db");
+    ".contextos", $"{workspaceId}.db");
 
-// Embeddings: try ONNX, fall back silently to null provider.
+// Load embeddings config first so the provider name is available for error messages.
+EmbeddingsConfig embeddingsCfg = EmbeddingsFactory.LoadConfig();
+string providerName = embeddingsCfg.Provider.ToLowerInvariant() switch
+{
+    "ollama" => "ollama",
+    "openai" => "openai",
+    _ => "onnx"
+};
+
+// Create provider. Fails immediately for ONNX when model files are absent.
 IEmbeddingsProvider embeddings;
 try
 {
-    embeddings = EmbeddingsFactory.Create();
+    embeddings = EmbeddingsFactory.CreateFromConfig(embeddingsCfg);
 }
-catch
+catch (Exception ex)
 {
-    embeddings = new NullEmbeddingsProvider();
+    WriteEmbeddingError(providerName, ex.Message);
+    return 1;
+}
+
+// Validate the provider actually produces embeddings before starting the server.
+try
+{
+    using var valCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    await embeddings.EmbedAsync("contextos startup check", valCts.Token);
+}
+catch (Exception ex)
+{
+    if (embeddings is IDisposable d) d.Dispose();
+    WriteEmbeddingError(providerName, ex.Message);
+    return 1;
 }
 
 SqliteStore store = await SqliteStore.OpenAsync(dbPath, embeddings);
@@ -58,10 +80,32 @@ builder.Services.AddMcpServer()
     .WithTools<RecallTool>();
 
 await builder.Build().RunAsync();
+return 0;
 
 // -------------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------------
+
+static void WriteEmbeddingError(string providerName, string detail)
+{
+    Console.Error.WriteLine(
+        $"""
+        ContextOS cannot start: no functional embeddings provider.
+
+        The configured provider is: {providerName}
+        Detail: {detail}
+
+        To fix:
+          - For the default ONNX provider: run `bash scripts/fetch-model.sh`
+            in the ContextOS repo root to download the model.
+          - For Ollama: ensure Ollama is running at the configured URL and
+            the model is pulled. Default: http://localhost:11434
+          - For OpenAI: set OPENAI_API_KEY in your environment or
+            ~/.contextos/config.json.
+
+        See docs/CONFIG.md (when written) or PROJECT.md section 8.
+        """);
+}
 
 static string? FindGitRoot(string start)
 {
