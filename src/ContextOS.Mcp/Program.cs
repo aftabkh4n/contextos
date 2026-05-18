@@ -17,9 +17,7 @@ string workspaceId = ComputeWorkspaceId(workspaceRoot);
 string workspaceName = Path.GetFileName(workspaceRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                        ?? workspaceId;
 
-string dbPath = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-    ".contextos", $"{workspaceId}.db");
+string dbPath = Path.Combine(EmbeddingsFactory.GetContextosHome(), $"{workspaceId}.db");
 
 // Load embeddings config first so the provider name is available for error messages.
 EmbeddingsConfig embeddingsCfg = EmbeddingsFactory.LoadConfig();
