@@ -1,4 +1,4 @@
-namespace ContextOS.Storage;
+namespace ContextOS.Core;
 
 /// <summary>Canonical values for <see cref="Memory.Type"/>.</summary>
 public static class MemoryTypes

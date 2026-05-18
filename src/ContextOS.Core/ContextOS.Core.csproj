@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\ContextOS.Storage\ContextOS.Storage.csproj" />
     <ProjectReference Include="..\ContextOS.Retrieval\ContextOS.Retrieval.csproj" />
     <ProjectReference Include="..\ContextOS.Git\ContextOS.Git.csproj" />
   </ItemGroup>

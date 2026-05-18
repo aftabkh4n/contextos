@@ -1,4 +1,4 @@
-namespace ContextOS.Storage;
+namespace ContextOS.Core;
 
 /// <summary>A registered workspace (one per repository root).</summary>
 public record Workspace(

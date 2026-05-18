@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace ContextOS.Storage;
+namespace ContextOS.Core;
 
 /// <summary>Generates ULID strings: 48-bit timestamp + 80-bit random, Crockford base32.</summary>
 public static class UlidHelper
