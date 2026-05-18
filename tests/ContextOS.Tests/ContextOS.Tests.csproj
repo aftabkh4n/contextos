@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\src\ContextOS.Core\ContextOS.Core.csproj" />
     <ProjectReference Include="..\..\src\ContextOS.Storage\ContextOS.Storage.csproj" />
     <ProjectReference Include="..\..\src\ContextOS.Embeddings\ContextOS.Embeddings.csproj" />
+    <ProjectReference Include="..\..\src\ContextOS.Retrieval\ContextOS.Retrieval.csproj" />
   </ItemGroup>
 
 </Project>
