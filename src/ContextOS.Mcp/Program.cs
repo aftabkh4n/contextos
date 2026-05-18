@@ -10,6 +10,28 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+// --selftest: validate the embeddings provider and exit. Used by CI smoke tests.
+if (args.Contains("--selftest"))
+{
+    EmbeddingsConfig selftestCfg = EmbeddingsFactory.LoadConfig();
+    IEmbeddingsProvider selftestProvider = EmbeddingsFactory.CreateFromConfig(selftestCfg);
+    try
+    {
+        await selftestProvider.EmbedAsync("selftest", CancellationToken.None);
+        Console.WriteLine("OK");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Embeddings selftest failed: {ex}");
+        return 1;
+    }
+    finally
+    {
+        if (selftestProvider is IDisposable sd) sd.Dispose();
+    }
+}
+
 // Detect workspace root: walk up from cwd looking for .git.
 string cwd = Directory.GetCurrentDirectory();
 string workspaceRoot = FindGitRoot(cwd) ?? cwd;
