@@ -24,5 +24,16 @@ jobs:
       - name: Build
         run: dotnet build --no-restore /p:TreatWarningsAsErrors=true
 
+      - name: Cache embeddings model
+        id: cache-model
+        uses: actions/cache@v4
+        with:
+          path: src/ContextOS.Embeddings/Models
+          key: minilm-l6-v2-onnx-v1
+
+      - name: Fetch embeddings model
+        if: steps.cache-model.outputs.cache-hit != 'true'
+        run: bash scripts/fetch-model.sh
+
       - name: Test
         run: dotnet test --no-build --verbosity normal
