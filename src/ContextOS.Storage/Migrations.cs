@@ -72,4 +72,14 @@ internal static class Migrations
         )
         """,
     ];
+
+    // Requires sqlite-vec extension loaded before this migration runs.
+    internal static readonly string[] V2 =
+    [
+        """
+        CREATE VIRTUAL TABLE memories_vec USING vec0(
+          embedding float[384]
+        )
+        """,
+    ];
 }
