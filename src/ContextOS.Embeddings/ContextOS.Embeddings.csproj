@@ -1,3 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ContextOS.Core\ContextOS.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Copy model files to output if present; absent is handled at runtime with a clear error. -->
+  <ItemGroup>
+    <None Include="Models\vocab.txt" Condition="Exists('Models\vocab.txt')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Models\all-MiniLM-L6-v2.onnx" Condition="Exists('Models\all-MiniLM-L6-v2.onnx')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
