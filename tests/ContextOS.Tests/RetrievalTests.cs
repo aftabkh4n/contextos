@@ -7,25 +7,20 @@ using Microsoft.Data.Sqlite;
 namespace ContextOS.Tests;
 
 /// <summary>
-/// Integration tests for HybridSearch. All tests return early (vacuous pass)
-/// when the ONNX model is absent so CI without the model still passes.
-/// The CI workflow fetches the model before running tests, so these execute
-/// end-to-end there.
+/// Integration tests for HybridSearch.
+/// Requires the ONNX model to be present: run bash scripts/fetch-model.sh once.
 /// </summary>
 public sealed class RetrievalTests : IAsyncLifetime
 {
-    private OnnxMiniLmProvider? _provider;
+    private OnnxMiniLmProvider _provider = null!;
     private SqliteStore _store = null!;
-    private HybridSearch? _search;
-    private bool _skip;
+    private HybridSearch _search = null!;
 
     private const string Ws = "ws-retrieval-tests";
 
     public async Task InitializeAsync()
     {
-        try { _provider = OnnxMiniLmProvider.Create(); }
-        catch (FileNotFoundException) { _skip = true; return; }
-
+        _provider = OnnxMiniLmProvider.Create();
         _store = await SqliteStore.OpenAsync(":memory:", _provider);
         _search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
 
@@ -36,8 +31,8 @@ public sealed class RetrievalTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        if (_store is not null) await _store.DisposeAsync();
-        _provider?.Dispose();
+        await _store.DisposeAsync();
+        _provider.Dispose();
     }
 
     // -------------------------------------------------------------------------
@@ -60,8 +55,6 @@ public sealed class RetrievalTests : IAsyncLifetime
     [Fact]
     public async Task Search_HybridFusion_ReturnsBothSemanticAndLexicalMatches()
     {
-        if (_skip) return;
-
         Memory a = await Add("Replaced babel with esbuild which cut CI compilation times from 45 seconds to 3 seconds");
         Memory b = await Add("webpack build optimization: enable production mode and tree shaking");
         // Noise memories — clearly off-topic.
@@ -74,7 +67,7 @@ public sealed class RetrievalTests : IAsyncLifetime
         await Add("Company all-hands is scheduled for next Thursday");
         await Add("Birthday cake for Sarah is chocolate flavour");
 
-        IReadOnlyList<SearchResult> results = await _search!.SearchAsync(Ws, "webpack build optimization", k: 5);
+        IReadOnlyList<SearchResult> results = await _search.SearchAsync(Ws, "webpack build optimization", k: 5);
 
         Assert.True(results.Count >= 2, $"Expected at least 2 results, got {results.Count}");
         var ids = results.Select(r => r.Id).ToHashSet();
@@ -89,13 +82,11 @@ public sealed class RetrievalTests : IAsyncLifetime
     [Fact]
     public async Task Search_NewerMemoryRanksHigherThanOlderWithSameContent()
     {
-        if (_skip) return;
-
         await _store.UpsertWorkspaceAsync(
             new Workspace("ws-age", "/test/age", "AgeTest", null,
                 DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
 
-        // Insert the "old" memory via AddMemoryAsync then back-date it with raw SQL.
+        // Insert the "old" memory then back-date it with raw SQL.
         Memory old = await _store.AddMemoryAsync("ws-age", "note", "connection pool exhausted under high load");
         long tenDaysAgo = DateTimeOffset.UtcNow.AddDays(-10).ToUnixTimeMilliseconds();
         using (SqliteCommand cmd = _store.Connection.CreateCommand())
@@ -108,7 +99,7 @@ public sealed class RetrievalTests : IAsyncLifetime
 
         Memory recent = await _store.AddMemoryAsync("ws-age", "note", "connection pool exhausted under high load");
 
-        var search = new HybridSearch(_store.Connection, _provider!, _store.VecAvailable);
+        var search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
         IReadOnlyList<SearchResult> results = await search.SearchAsync("ws-age", "connection pool exhausted");
 
         SearchResult? oldResult    = results.FirstOrDefault(r => r.Id == old.Id);
@@ -127,8 +118,6 @@ public sealed class RetrievalTests : IAsyncLifetime
     [Fact]
     public async Task Search_HigherImportanceRanksHigherWhenAgeIsEqual()
     {
-        if (_skip) return;
-
         await _store.UpsertWorkspaceAsync(
             new Workspace("ws-imp", "/test/imp", "ImportanceTest", null,
                 DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
@@ -136,7 +125,7 @@ public sealed class RetrievalTests : IAsyncLifetime
         Memory low  = await _store.AddMemoryAsync("ws-imp", "note", "SQL query uses a full table scan on orders", importance: 0.2);
         Memory high = await _store.AddMemoryAsync("ws-imp", "note", "SQL query uses a full table scan on orders", importance: 0.9);
 
-        var search = new HybridSearch(_store.Connection, _provider!, _store.VecAvailable);
+        var search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
         IReadOnlyList<SearchResult> results = await search.SearchAsync("ws-imp", "SQL table scan");
 
         SearchResult? lowResult  = results.FirstOrDefault(r => r.Id == low.Id);
@@ -154,8 +143,6 @@ public sealed class RetrievalTests : IAsyncLifetime
     [Fact]
     public async Task Search_TypeFilter_ReturnsOnlyMatchingTypes()
     {
-        if (_skip) return;
-
         await _store.UpsertWorkspaceAsync(
             new Workspace("ws-type", "/test/type", "TypeTest", null,
                 DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
@@ -164,7 +151,7 @@ public sealed class RetrievalTests : IAsyncLifetime
         await _store.AddMemoryAsync("ws-type", MemoryTypes.Decision, "authentication uses JWT RS256 tokens");
         await _store.AddMemoryAsync("ws-type", MemoryTypes.Gotcha,   "authentication uses JWT RS256 tokens");
 
-        var search = new HybridSearch(_store.Connection, _provider!, _store.VecAvailable);
+        var search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
         IReadOnlyList<SearchResult> results = await search.SearchAsync(
             "ws-type", "JWT authentication", types: [MemoryTypes.Decision]);
 
@@ -178,13 +165,11 @@ public sealed class RetrievalTests : IAsyncLifetime
     [Fact]
     public async Task Search_EmptyWorkspace_ReturnsEmpty()
     {
-        if (_skip) return;
-
         await _store.UpsertWorkspaceAsync(
             new Workspace("ws-empty", "/test/empty", "EmptyTest", null,
                 DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
 
-        var search = new HybridSearch(_store.Connection, _provider!, _store.VecAvailable);
+        var search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
         IReadOnlyList<SearchResult> results = await search.SearchAsync("ws-empty", "anything at all");
 
         Assert.Empty(results);
