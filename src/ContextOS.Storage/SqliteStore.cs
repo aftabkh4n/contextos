@@ -10,11 +10,20 @@ namespace ContextOS.Storage;
 public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
 {
     private readonly SqliteConnection _conn;
+    private readonly IEmbeddingsProvider? _embeddings;
+    private bool _vecAvailable;
 
-    private SqliteStore(SqliteConnection conn) => _conn = conn;
+    private SqliteStore(SqliteConnection conn, IEmbeddingsProvider? embeddings)
+    {
+        _conn = conn;
+        _embeddings = embeddings;
+    }
 
     /// <summary>Opens (or creates) the database at <paramref name="dbPath"/> and runs pending migrations.</summary>
-    public static async Task<SqliteStore> OpenAsync(string dbPath, CancellationToken ct = default)
+    public static async Task<SqliteStore> OpenAsync(
+        string dbPath,
+        IEmbeddingsProvider? embeddings = null,
+        CancellationToken ct = default)
     {
         if (!string.Equals(dbPath, ":memory:", StringComparison.OrdinalIgnoreCase))
         {
@@ -26,7 +35,7 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         var conn = new SqliteConnection($"Data Source={dbPath}");
         await conn.OpenAsync(ct);
 
-        var store = new SqliteStore(conn);
+        var store = new SqliteStore(conn, embeddings);
         await store.InitAsync(ct);
         return store;
     }
@@ -36,7 +45,23 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         // WAL gives better read/write concurrency; foreign_keys enforces referential integrity.
         await RunAsync("PRAGMA journal_mode=WAL", ct);
         await RunAsync("PRAGMA foreign_keys=ON", ct);
+        _vecAvailable = TryLoadVec();
         await MigrateAsync(ct);
+    }
+
+    private bool TryLoadVec()
+    {
+        try
+        {
+            _conn.LoadVector(); // sqlite-vec extension
+            return true;
+        }
+        catch
+        {
+            // Extension not available on this platform; vector storage is skipped.
+            // Retrieval will fall back to a full-scan cosine similarity if needed.
+            return false;
+        }
     }
 
     private async Task MigrateAsync(CancellationToken ct)
@@ -44,6 +69,9 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         int version = await UserVersionAsync(ct);
         if (version < 1)
             await ApplyAsync(Migrations.V1, 1, ct);
+        // Migration 2 requires vec0; skip silently if extension not loaded.
+        if (version < 2 && _vecAvailable)
+            await ApplyAsync(Migrations.V2, 2, ct);
     }
 
     private async Task<int> UserVersionAsync(CancellationToken ct)
@@ -114,6 +142,13 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         cmd.Parameters.AddWithValue("@createdAt", createdAt);
         await cmd.ExecuteNonQueryAsync(ct);
 
+        if (_vecAvailable && _embeddings is not null)
+        {
+            long rowid = await LastInsertRowidAsync(ct);
+            float[] embedding = await _embeddings.EmbedAsync(content, ct);
+            await InsertVecAsync(rowid, embedding, ct);
+        }
+
         return new Memory(id, workspaceId, type, content, source, tags, importance, createdAt, null);
     }
 
@@ -164,6 +199,17 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
     /// <summary>Deletes the memory with <paramref name="id"/>. Returns true if a row was removed.</summary>
     public async Task<bool> DeleteMemoryAsync(string id, CancellationToken ct = default)
     {
+        // Capture rowid before the row is gone so we can clean up memories_vec.
+        if (_vecAvailable)
+        {
+            using var rowidCmd = _conn.CreateCommand();
+            rowidCmd.CommandText = "SELECT rowid FROM memories WHERE id = @id";
+            rowidCmd.Parameters.AddWithValue("@id", id);
+            object? rowid = await rowidCmd.ExecuteScalarAsync(ct);
+            if (rowid is not null)
+                await DeleteVecAsync(Convert.ToInt64(rowid), ct);
+        }
+
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = "DELETE FROM memories WHERE id = @id";
         cmd.Parameters.AddWithValue("@id", id);
@@ -214,6 +260,37 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
             reader.GetString(2),
             reader.IsDBNull(3) ? null : reader.GetString(3),
             reader.GetInt64(4));
+    }
+
+    // -------------------------------------------------------------------------
+    // Vec helpers
+    // -------------------------------------------------------------------------
+
+    private async Task InsertVecAsync(long rowid, float[] embedding, CancellationToken ct)
+    {
+        byte[] blob = new byte[embedding.Length * sizeof(float)];
+        Buffer.BlockCopy(embedding, 0, blob, 0, blob.Length);
+
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "INSERT INTO memories_vec(rowid, embedding) VALUES (@rowid, @embedding)";
+        cmd.Parameters.AddWithValue("@rowid", rowid);
+        cmd.Parameters.AddWithValue("@embedding", blob);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    private async Task DeleteVecAsync(long rowid, CancellationToken ct)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM memories_vec WHERE rowid = @rowid";
+        cmd.Parameters.AddWithValue("@rowid", rowid);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    private async Task<long> LastInsertRowidAsync(CancellationToken ct)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "SELECT last_insert_rowid()";
+        return Convert.ToInt64(await cmd.ExecuteScalarAsync(ct));
     }
 
     // -------------------------------------------------------------------------
