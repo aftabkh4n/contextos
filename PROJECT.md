@@ -53,12 +53,7 @@ ContextOS.Mcp (entry point)
         +-- ContextOS.Retrieval (hybrid search)
         +-- ContextOS.Embeddings (provider seam)
         +-- ContextOS.Git (libgit2sharp wrapper)
-                |
-                v
-        BlazorMemory (existing library, used as engine)
 ```
-
-**BlazorMemory** is an existing NuGet package owned by the same author. ContextOS depends on it as a library for storage, embedding, and search primitives. Do not modify BlazorMemory in this repo — treat it as a stable dependency.
 
 ## 4. Solution structure
 
@@ -82,7 +77,7 @@ CLAUDE.md
 PROJECT.md
 ```
 
-Dependency direction: `Mcp -> Core -> {Storage, Retrieval, Git}`, `Retrieval -> Embeddings`, `Storage -> BlazorMemory`. No cycles.
+Dependency direction: `Mcp -> Core -> {Storage, Retrieval, Git}`, `Retrieval -> Embeddings`, `Storage (no external runtime deps)`. No cycles.
 
 ## 5. Storage schema (SQLite)
 
