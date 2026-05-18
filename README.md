@@ -14,14 +14,42 @@ Three MCP tools: `remember`, `recall`, `context`.
 
 ## Local development setup
 
-1. Clone the repo.
-2. Run `bash scripts/fetch-model.sh` once to download the all-MiniLM-L6-v2 ONNX model (~22 MB) into `src/ContextOS.Embeddings/Models/`. The model is excluded from git.
-3. Run `dotnet test`. All tests should pass.
+**Prerequisites — do these once before running tests.**
+
+### 1. Download the embeddings model
+
+The default provider is `all-MiniLM-L6-v2` running via ONNX Runtime (~22 MB). It is not checked into git.
 
 ```
+bash scripts/fetch-model.sh
+```
+
+This writes two files into `src/ContextOS.Embeddings/Models/`:
+- `all-MiniLM-L6-v2.onnx`
+- `vocab.txt`
+
+The server will not start without these files. If you skip this step, you will see:
+
+```
+ContextOS cannot start: no functional embeddings provider.
+The configured provider is: onnx
+...
+```
+
+### 2. Build and test
+
+```
+dotnet test
+```
+
+All 25 tests should pass, including the end-to-end MCP integration tests that spawn the server as a subprocess.
+
+### Full setup from scratch
+
+```sh
 git clone https://github.com/bro1o1/contextos
 cd contextos
-bash scripts/fetch-model.sh
+bash scripts/fetch-model.sh   # required — downloads the ONNX model
 dotnet test
 ```
 
