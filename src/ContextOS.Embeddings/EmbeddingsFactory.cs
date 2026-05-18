@@ -26,7 +26,11 @@ public static class EmbeddingsFactory
             _        => OnnxMiniLmProvider.Create(modelsDir),
         };
 
-    private static EmbeddingsConfig LoadConfig()
+    /// <summary>
+    /// Reads <c>~/.contextos/config.json</c> and returns the embeddings section.
+    /// Never throws; returns default config if the file is absent or malformed.
+    /// </summary>
+    public static EmbeddingsConfig LoadConfig()
     {
         string path = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
