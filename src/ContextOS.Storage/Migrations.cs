@@ -1,7 +1,15 @@
 namespace ContextOS.Storage;
 
 // Each string is a single DDL statement executed in order inside one transaction.
-// memories_vec (sqlite-vec) is added in migration 2 on Day 3 when embeddings are wired.
+//
+// Version history:
+//   1 — base schema (workspaces, memories, FTS5, hydration_log)
+//   2 — sqlite-vec memories_vec table (DROPPED before v1; slot permanently skipped)
+//   3 — embedding BLOB column on memories (v1 vector storage strategy)
+//
+// MigrateAsync jumps from 1 directly to 3, leaving slot 2 vacant. This avoids
+// misapplying the embedding migration to any database that was at version 2
+// during the development period.
 internal static class Migrations
 {
     internal static readonly string[] V1 =
@@ -73,19 +81,8 @@ internal static class Migrations
         """,
     ];
 
-    // Requires sqlite-vec extension loaded before this migration runs.
+    // Stored as version 3 (not 2) because slot 2 was sqlite-vec. See header comment.
     internal static readonly string[] V2 =
-    [
-        """
-        CREATE VIRTUAL TABLE memories_vec USING vec0(
-          embedding float[384]
-        )
-        """,
-    ];
-
-    // Adds embedding BLOB to memories so the cosine-scan fallback has a source
-    // when sqlite-vec is not available.
-    internal static readonly string[] V3 =
     [
         "ALTER TABLE memories ADD COLUMN embedding BLOB",
     ];

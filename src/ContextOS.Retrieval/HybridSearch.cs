@@ -4,29 +4,24 @@ using Microsoft.Data.Sqlite;
 namespace ContextOS.Retrieval;
 
 /// <summary>
-/// Hybrid retrieval: sqlite-vec KNN (or managed cosine scan) merged with FTS5
-/// via Reciprocal Rank Fusion, then reranked by recency and importance.
+/// Hybrid retrieval: cosine similarity scan over embedding BLOBs merged with
+/// FTS5 BM25 via Reciprocal Rank Fusion, then reranked by recency and importance.
+///
+/// Vector search strategy: full scan of memories.embedding with managed cosine
+/// similarity. This is the v1 strategy. When a workspace exceeds ~50k memories,
+/// revisit with sqlite-vec KNN or an HNSW index.
 /// </summary>
 public sealed class HybridSearch : ISearch
 {
     private readonly SqliteConnection _conn;
     private readonly IEmbeddingsProvider _embeddings;
-    private readonly bool _vecAvailable;
 
-    /// <param name="conn">
-    ///   Open connection that already has the sqlite-vec extension loaded
-    ///   (pass <c>SqliteStore.Connection</c>).
-    /// </param>
+    /// <param name="conn">Open connection — pass <c>SqliteStore.Connection</c>.</param>
     /// <param name="embeddings">Provider used to embed the query at search time.</param>
-    /// <param name="vecAvailable">
-    ///   Pass <c>SqliteStore.VecAvailable</c>. When false the search falls back
-    ///   to a full cosine scan over the <c>memories.embedding</c> BLOB column.
-    /// </param>
-    public HybridSearch(SqliteConnection conn, IEmbeddingsProvider embeddings, bool vecAvailable)
+    public HybridSearch(SqliteConnection conn, IEmbeddingsProvider embeddings)
     {
         _conn = conn;
         _embeddings = embeddings;
-        _vecAvailable = vecAvailable;
     }
 
     /// <inheritdoc />
@@ -39,10 +34,7 @@ public sealed class HybridSearch : ISearch
     {
         float[] queryVec = await _embeddings.EmbedAsync(query, ct);
 
-        List<long> vecRowids = _vecAvailable
-            ? await VecSearchAsync(queryVec, 20, ct)
-            : await CosineSearchAsync(workspaceId, queryVec, 20, ct);
-
+        List<long> vecRowids = await VectorSearchAsync(workspaceId, queryVec, 20, ct);
         List<long> ftsRowids = await FtsSearchAsync(workspaceId, query, 20, ct);
 
         Dictionary<long, double> rrfScores = Rrf(vecRowids, ftsRowids);
@@ -70,29 +62,10 @@ public sealed class HybridSearch : ISearch
     }
 
     // -------------------------------------------------------------------------
-    // Vector search
+    // Vector search (managed cosine scan over embedding BLOBs)
     // -------------------------------------------------------------------------
 
-    private async Task<List<long>> VecSearchAsync(float[] queryVec, int limit, CancellationToken ct)
-    {
-        using var cmd = _conn.CreateCommand();
-        // sqlite-vec KNN: returns rowids ordered by ascending L2 distance.
-        cmd.CommandText = $"""
-            SELECT rowid FROM memories_vec
-            WHERE embedding MATCH @embedding
-            ORDER BY distance
-            LIMIT {limit}
-            """;
-        cmd.Parameters.AddWithValue("@embedding", ToBlob(queryVec));
-
-        var rowids = new List<long>(limit);
-        using SqliteDataReader r = await cmd.ExecuteReaderAsync(ct);
-        while (await r.ReadAsync(ct))
-            rowids.Add(r.GetInt64(0));
-        return rowids;
-    }
-
-    private async Task<List<long>> CosineSearchAsync(
+    private async Task<List<long>> VectorSearchAsync(
         string workspaceId, float[] queryVec, int limit, CancellationToken ct)
     {
         using var cmd = _conn.CreateCommand();
@@ -234,13 +207,6 @@ public sealed class HybridSearch : ISearch
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
-
-    private static byte[] ToBlob(float[] v)
-    {
-        byte[] b = new byte[v.Length * sizeof(float)];
-        Buffer.BlockCopy(v, 0, b, 0, b.Length);
-        return b;
-    }
 
     private static float[] FromBlob(byte[] b)
     {

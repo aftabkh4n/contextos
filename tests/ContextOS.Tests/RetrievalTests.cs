@@ -22,7 +22,7 @@ public sealed class RetrievalTests : IAsyncLifetime
     {
         _provider = OnnxMiniLmProvider.Create();
         _store = await SqliteStore.OpenAsync(":memory:", _provider);
-        _search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
+        _search = new HybridSearch(_store.Connection, _provider);
 
         await _store.UpsertWorkspaceAsync(
             new Workspace(Ws, "/test/retrieval", "RetrievalTests", null,
@@ -99,7 +99,7 @@ public sealed class RetrievalTests : IAsyncLifetime
 
         Memory recent = await _store.AddMemoryAsync("ws-age", "note", "connection pool exhausted under high load");
 
-        var search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
+        var search = new HybridSearch(_store.Connection, _provider);
         IReadOnlyList<SearchResult> results = await search.SearchAsync("ws-age", "connection pool exhausted");
 
         SearchResult? oldResult    = results.FirstOrDefault(r => r.Id == old.Id);
@@ -125,7 +125,7 @@ public sealed class RetrievalTests : IAsyncLifetime
         Memory low  = await _store.AddMemoryAsync("ws-imp", "note", "SQL query uses a full table scan on orders", importance: 0.2);
         Memory high = await _store.AddMemoryAsync("ws-imp", "note", "SQL query uses a full table scan on orders", importance: 0.9);
 
-        var search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
+        var search = new HybridSearch(_store.Connection, _provider);
         IReadOnlyList<SearchResult> results = await search.SearchAsync("ws-imp", "SQL table scan");
 
         SearchResult? lowResult  = results.FirstOrDefault(r => r.Id == low.Id);
@@ -151,7 +151,7 @@ public sealed class RetrievalTests : IAsyncLifetime
         await _store.AddMemoryAsync("ws-type", MemoryTypes.Decision, "authentication uses JWT RS256 tokens");
         await _store.AddMemoryAsync("ws-type", MemoryTypes.Gotcha,   "authentication uses JWT RS256 tokens");
 
-        var search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
+        var search = new HybridSearch(_store.Connection, _provider);
         IReadOnlyList<SearchResult> results = await search.SearchAsync(
             "ws-type", "JWT authentication", types: [MemoryTypes.Decision]);
 
@@ -169,7 +169,7 @@ public sealed class RetrievalTests : IAsyncLifetime
             new Workspace("ws-empty", "/test/empty", "EmptyTest", null,
                 DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
 
-        var search = new HybridSearch(_store.Connection, _provider, _store.VecAvailable);
+        var search = new HybridSearch(_store.Connection, _provider);
         IReadOnlyList<SearchResult> results = await search.SearchAsync("ws-empty", "anything at all");
 
         Assert.Empty(results);
