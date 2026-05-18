@@ -21,9 +21,6 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --no-restore /p:TreatWarningsAsErrors=true
-
       - name: Cache embeddings model
         id: cache-model
         uses: actions/cache@v4
@@ -34,6 +31,14 @@ jobs:
       - name: Fetch embeddings model
         if: steps.cache-model.outputs.cache-hit != 'true'
         run: bash scripts/fetch-model.sh
+
+      - name: Build
+        run: dotnet build --no-restore /p:TreatWarningsAsErrors=true
+
+      - name: Smoke test embeddings on this OS
+        run: |
+          cd src/ContextOS.Mcp
+          timeout 30 dotnet run --no-build -- --selftest
 
       - name: Test
         run: dotnet test --no-build --verbosity normal
