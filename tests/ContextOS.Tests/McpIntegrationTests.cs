@@ -28,7 +28,7 @@ public sealed class McpIntegrationTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        string dll = FindMcpDll();
+        string dll = McpTestHelpers.FindMcpDll();
         _tempDir = Path.Combine(Path.GetTempPath(), $"contextos-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
 
@@ -255,26 +255,6 @@ public sealed class McpIntegrationTests : IAsyncLifetime
 
     private static bool IsError(JsonElement result) =>
         result.TryGetProperty("isError", out JsonElement el) && el.GetBoolean();
-
-    private static string FindMcpDll()
-    {
-        string? dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            if (Directory.GetFiles(dir, "*.slnx").Length > 0)
-            {
-                foreach (string config in new[] { "Debug", "Release" })
-                {
-                    string dll = Path.Combine(dir, "src", "ContextOS.Mcp", "bin", config, "net10.0", "ContextOS.Mcp.dll");
-                    if (File.Exists(dll)) return dll;
-                }
-                throw new FileNotFoundException(
-                    $"ContextOS.Mcp.dll not found under {dir}/src/ContextOS.Mcp/bin/. Build the solution first.");
-            }
-            dir = Path.GetDirectoryName(dir);
-        }
-        throw new InvalidOperationException("Could not find solution root (.slnx) by walking up from test BaseDirectory.");
-    }
 
     private static string ComputeWorkspaceId(string path) =>
         Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(path)))[..16].ToLowerInvariant();
