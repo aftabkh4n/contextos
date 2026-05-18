@@ -24,32 +24,79 @@ public sealed class OnnxMiniLmProvider : IEmbeddingsProvider, IDisposable
     }
 
     /// <summary>
-    /// Loads the model from <paramref name="modelsDir"/> (defaults to
-    /// <c>AppContext.BaseDirectory/Models</c>). Throws <see cref="FileNotFoundException"/>
-    /// with instructions to run <c>scripts/fetch-model.sh</c> if files are absent.
+    /// Loads the model from <paramref name="modelsDir"/>, or searches a set of candidate
+    /// directories when <paramref name="modelsDir"/> is <see langword="null"/>. Throws
+    /// <see cref="FileNotFoundException"/> listing every path checked when no files are found.
     /// </summary>
     public static OnnxMiniLmProvider Create(string? modelsDir = null)
     {
-        string dir = modelsDir ?? Path.Combine(AppContext.BaseDirectory, "Models");
-        string modelPath = Path.Combine(dir, "all-MiniLM-L6-v2.onnx");
-        string vocabPath = Path.Combine(dir, "vocab.txt");
+        List<string> candidateDirs;
+        if (modelsDir is not null)
+        {
+            candidateDirs = [modelsDir];
+        }
+        else
+        {
+            candidateDirs = new List<string>();
 
-        if (!File.Exists(modelPath))
-            throw new FileNotFoundException(
-                $"ONNX model not found at '{modelPath}'. " +
-                "Download it by running: bash scripts/fetch-model.sh",
-                modelPath);
+            // 1. Next to the DLL — populated via CopyToOutputDirectory in the csproj.
+            candidateDirs.Add(Path.Combine(AppContext.BaseDirectory, "Models"));
 
-        if (!File.Exists(vocabPath))
+            // 2. Source Models dir when running from a bin/Debug/net10.0/ layout.
+            //    Walk up 4 levels (net10.0 -> Debug -> bin -> project) to arrive at src/,
+            //    then step into the Embeddings project's Models folder.
+            candidateDirs.Add(Path.Combine(
+                AppContext.BaseDirectory, "..", "..", "..", "..",
+                "ContextOS.Embeddings", "Models"));
+
+            // 3. Repo-root relative path — covers CI where build precedes model fetch.
+            string? repoRoot = FindRepoRoot(Directory.GetCurrentDirectory());
+            if (repoRoot is not null)
+                candidateDirs.Add(Path.Combine(repoRoot, "src", "ContextOS.Embeddings", "Models"));
+        }
+
+        string? resolvedDir = null;
+        foreach (string candidate in candidateDirs)
+        {
+            string full = Path.GetFullPath(candidate);
+            if (File.Exists(Path.Combine(full, "all-MiniLM-L6-v2.onnx")) &&
+                File.Exists(Path.Combine(full, "vocab.txt")))
+            {
+                resolvedDir = full;
+                break;
+            }
+        }
+
+        if (resolvedDir is null)
+        {
+            string checkedList = string.Join(
+                Environment.NewLine,
+                candidateDirs.Select(d => "  " + Path.GetFullPath(d)));
             throw new FileNotFoundException(
-                $"Tokenizer vocabulary not found at '{vocabPath}'. " +
-                "Download it by running: bash scripts/fetch-model.sh",
-                vocabPath);
+                $"ONNX model files (all-MiniLM-L6-v2.onnx + vocab.txt) not found in any of:{Environment.NewLine}" +
+                $"{checkedList}{Environment.NewLine}" +
+                "Download them by running: bash scripts/fetch-model.sh");
+        }
+
+        string modelPath = Path.Combine(resolvedDir, "all-MiniLM-L6-v2.onnx");
+        string vocabPath = Path.Combine(resolvedDir, "vocab.txt");
 
         var opts = new SessionOptions { IntraOpNumThreads = 1, InterOpNumThreads = 1 };
         return new OnnxMiniLmProvider(
             new InferenceSession(modelPath, opts),
             new BertWordPieceTokenizer(vocabPath));
+    }
+
+    private static string? FindRepoRoot(string start)
+    {
+        string? dir = start;
+        while (dir is not null)
+        {
+            if (Directory.GetFiles(dir, "ContextOS.slnx").Length > 0)
+                return dir;
+            dir = Path.GetDirectoryName(dir);
+        }
+        return null;
     }
 
     public Task<float[]> EmbedAsync(string text, CancellationToken ct = default)
