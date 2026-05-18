@@ -8,13 +8,11 @@
     <ProjectReference Include="..\ContextOS.Core\ContextOS.Core.csproj" />
   </ItemGroup>
 
-  <!-- Copy model files to output if present; absent is handled at runtime with a clear error. -->
+  <!-- Copy the entire Models directory to every output that references this project. -->
   <ItemGroup>
-    <None Include="Models\vocab.txt" Condition="Exists('Models\vocab.txt')">
+    <None Include="Models\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Models\all-MiniLM-L6-v2.onnx" Condition="Exists('Models\all-MiniLM-L6-v2.onnx')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Models\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
   </ItemGroup>
 
