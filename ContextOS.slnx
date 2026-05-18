@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ContextOS.Core/ContextOS.Core.csproj" />
+    <Project Path="src/ContextOS.Embeddings/ContextOS.Embeddings.csproj" />
+    <Project Path="src/ContextOS.Git/ContextOS.Git.csproj" />
+    <Project Path="src/ContextOS.Mcp/ContextOS.Mcp.csproj" />
+    <Project Path="src/ContextOS.Retrieval/ContextOS.Retrieval.csproj" />
+    <Project Path="src/ContextOS.Storage/ContextOS.Storage.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ContextOS.Tests/ContextOS.Tests.csproj" />
+  </Folder>
+</Solution>
