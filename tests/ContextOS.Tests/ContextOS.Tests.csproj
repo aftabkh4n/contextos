@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ContextOS.Core\ContextOS.Core.csproj" />
+    <ProjectReference Include="..\..\src\ContextOS.Storage\ContextOS.Storage.csproj" />
   </ItemGroup>
 
 </Project>

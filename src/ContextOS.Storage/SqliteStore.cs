@@ -15,9 +15,12 @@ public sealed class SqliteStore : IAsyncDisposable
     /// <summary>Opens (or creates) the database at <paramref name="dbPath"/> and runs pending migrations.</summary>
     public static async Task<SqliteStore> OpenAsync(string dbPath, CancellationToken ct = default)
     {
-        string? dir = Path.GetDirectoryName(Path.GetFullPath(dbPath));
-        if (dir is not null)
-            Directory.CreateDirectory(dir);
+        if (!string.Equals(dbPath, ":memory:", StringComparison.OrdinalIgnoreCase))
+        {
+            string? dir = Path.GetDirectoryName(Path.GetFullPath(dbPath));
+            if (dir is not null)
+                Directory.CreateDirectory(dir);
+        }
 
         var conn = new SqliteConnection($"Data Source={dbPath}");
         await conn.OpenAsync(ct);
