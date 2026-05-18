@@ -18,6 +18,7 @@ public sealed class McpIntegrationTests : IAsyncLifetime
     private Process? _server;
     private StreamWriter? _stdin;
     private StreamReader? _stdout;
+    private Task<string>? _stderrTask;
     private string? _tempDir;
     private string? _dbPath;
     private int _nextId = 1;
@@ -42,7 +43,7 @@ public sealed class McpIntegrationTests : IAsyncLifetime
             WorkingDirectory = _tempDir,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
-            RedirectStandardError = false, // server logs go to test runner's stderr
+            RedirectStandardError = true,
             UseShellExecute = false,
         };
 
@@ -50,8 +51,23 @@ public sealed class McpIntegrationTests : IAsyncLifetime
         _stdin = _server.StandardInput;
         _stdout = _server.StandardOutput;
 
-        // Give the generic host a moment to finish startup.
-        await Task.Delay(1000);
+        // Drain stderr in the background. If we block on WaitForExit without draining,
+        // the process can deadlock when its stderr pipe buffer fills.
+        _stderrTask = _server.StandardError.ReadToEndAsync();
+
+        // Wait up to 2 s for the server to be alive. If it exits before then, it
+        // died at startup — surface the full stderr instead of a cryptic Broken pipe.
+        using var startupCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        Task exitTask = _server.WaitForExitAsync(startupCts.Token);
+        Task delayTask = Task.Delay(TimeSpan.FromSeconds(2), startupCts.Token);
+
+        if (await Task.WhenAny(exitTask, delayTask) == exitTask)
+        {
+            string stderr = await _stderrTask.WaitAsync(TimeSpan.FromSeconds(3));
+            throw new InvalidOperationException(
+                $"MCP server subprocess died during startup. Exit code: {_server.ExitCode}.\n" +
+                $"Stderr:\n{stderr}");
+        }
     }
 
     public async Task DisposeAsync()
@@ -242,7 +258,15 @@ public sealed class McpIntegrationTests : IAsyncLifetime
         {
             string? line = await _stdout!.ReadLineAsync(cts.Token);
             if (line is null)
-                throw new EndOfStreamException("MCP server closed stdout unexpectedly.");
+            {
+                // Stdout closed — server died. Collect stderr for diagnostics.
+                string stderr = await (_stderrTask ?? Task.FromResult("(stderr not captured)"))
+                    .WaitAsync(TimeSpan.FromSeconds(3));
+                int code = (_server?.HasExited == true) ? _server.ExitCode : -1;
+                throw new InvalidOperationException(
+                    $"MCP server subprocess died during test. Exit code: {code}.\n" +
+                    $"Stderr:\n{stderr}");
+            }
             if (string.IsNullOrWhiteSpace(line) || !line.StartsWith('{'))
                 continue;
 
