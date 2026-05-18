@@ -82,4 +82,11 @@ internal static class Migrations
         )
         """,
     ];
+
+    // Adds embedding BLOB to memories so the cosine-scan fallback has a source
+    // when sqlite-vec is not available.
+    internal static readonly string[] V3 =
+    [
+        "ALTER TABLE memories ADD COLUMN embedding BLOB",
+    ];
 }

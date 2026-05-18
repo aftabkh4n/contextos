@@ -13,6 +13,11 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
     private readonly IEmbeddingsProvider? _embeddings;
     private bool _vecAvailable;
 
+    /// <summary>The underlying connection, shared with HybridSearch so both use one SQLite handle.</summary>
+    public SqliteConnection Connection => _conn;
+    /// <summary>True when the sqlite-vec extension loaded and memories_vec exists.</summary>
+    public bool VecAvailable => _vecAvailable;
+
     private SqliteStore(SqliteConnection conn, IEmbeddingsProvider? embeddings)
     {
         _conn = conn;
@@ -72,6 +77,8 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         // Migration 2 requires vec0; skip silently if extension not loaded.
         if (version < 2 && _vecAvailable)
             await ApplyAsync(Migrations.V2, 2, ct);
+        if (version < 3)
+            await ApplyAsync(Migrations.V3, 3, ct);
     }
 
     private async Task<int> UserVersionAsync(CancellationToken ct)
@@ -127,10 +134,15 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         string id = UlidHelper.NewUlid();
         long createdAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
+        // Compute embedding before the INSERT so we can store it in one round-trip.
+        float[]? embedding = _embeddings is not null
+            ? await _embeddings.EmbedAsync(content, ct)
+            : null;
+
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO memories (id, workspace_id, type, content, source, tags, importance, created_at)
-            VALUES (@id, @workspaceId, @type, @content, @source, @tags, @importance, @createdAt)
+            INSERT INTO memories (id, workspace_id, type, content, source, tags, importance, created_at, embedding)
+            VALUES (@id, @workspaceId, @type, @content, @source, @tags, @importance, @createdAt, @embedding)
             """;
         cmd.Parameters.AddWithValue("@id", id);
         cmd.Parameters.AddWithValue("@workspaceId", workspaceId);
@@ -140,12 +152,12 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         cmd.Parameters.AddWithValue("@tags", (object?)tags ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@importance", importance);
         cmd.Parameters.AddWithValue("@createdAt", createdAt);
+        cmd.Parameters.AddWithValue("@embedding", embedding is not null ? (object)EmbeddingToBlob(embedding) : DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct);
 
-        if (_vecAvailable && _embeddings is not null)
+        if (_vecAvailable && embedding is not null)
         {
             long rowid = await LastInsertRowidAsync(ct);
-            float[] embedding = await _embeddings.EmbedAsync(content, ct);
             await InsertVecAsync(rowid, embedding, ct);
         }
 
@@ -266,15 +278,19 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
     // Vec helpers
     // -------------------------------------------------------------------------
 
+    private static byte[] EmbeddingToBlob(float[] v)
+    {
+        byte[] b = new byte[v.Length * sizeof(float)];
+        Buffer.BlockCopy(v, 0, b, 0, b.Length);
+        return b;
+    }
+
     private async Task InsertVecAsync(long rowid, float[] embedding, CancellationToken ct)
     {
-        byte[] blob = new byte[embedding.Length * sizeof(float)];
-        Buffer.BlockCopy(embedding, 0, blob, 0, blob.Length);
-
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = "INSERT INTO memories_vec(rowid, embedding) VALUES (@rowid, @embedding)";
         cmd.Parameters.AddWithValue("@rowid", rowid);
-        cmd.Parameters.AddWithValue("@embedding", blob);
+        cmd.Parameters.AddWithValue("@embedding", EmbeddingToBlob(embedding));
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
