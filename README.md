@@ -12,6 +12,19 @@ A single-binary MCP server written in .NET 10. It stores engineering memories (d
 
 Three MCP tools: `remember`, `recall`, `context`.
 
+## Local development setup
+
+1. Clone the repo.
+2. Run `bash scripts/fetch-model.sh` once to download the all-MiniLM-L6-v2 ONNX model (~22 MB) into `src/ContextOS.Embeddings/Models/`. The model is excluded from git.
+3. Run `dotnet test`. All tests should pass.
+
+```
+git clone https://github.com/bro1o1/contextos
+cd contextos
+bash scripts/fetch-model.sh
+dotnet test
+```
+
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).
