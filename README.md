@@ -84,9 +84,21 @@ subprocess, so the model must be downloaded first.
 
 ### Embeddings model
 
-The default provider is `all-MiniLM-L6-v2` running via ONNX Runtime. It is
-not checked into git. `fetch-model.sh` writes two files into
-`src/ContextOS.Embeddings/Models/`:
+Three providers are supported. The default is ONNX (no setup beyond
+downloading the model file). Ollama and OpenAI are also supported for
+teams that prefer them.
+
+| Provider | Setup | Dimension |
+|----------|-------|-----------|
+| `onnx` (default) | Run `fetch-model.sh` | 384 |
+| `ollama` | `ollama serve` + `ollama pull nomic-embed-text` | 768 |
+| `openai` | `OPENAI_API_KEY` env var or config | 1536 |
+
+Configure via `~/.contextos/config.json`. See [docs/CONFIG.md](docs/CONFIG.md)
+for the full reference.
+
+The ONNX model is not checked into git. `fetch-model.sh` writes two files
+into `src/ContextOS.Embeddings/Models/`:
 
 - `all-MiniLM-L6-v2.onnx`
 - `vocab.txt`
