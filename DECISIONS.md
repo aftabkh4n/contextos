@@ -5,6 +5,7 @@ ADR but are worth a note. Newest first.
 
 | Date       | Decision                                    | Rationale                                                                                                  |
 |------------|---------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| 2026-05-19 | Auto-hydration via serverInfo.instructions (Option A), not prompts/list (Option B) | Option A is automatic: the agent receives context on every initialize without the user picking anything from a menu. Option B requires the user to explicitly invoke a prompt, which defeats the "already knows" goal. |
 | 2026-05-18 | Manual end-to-end test of context tool with Claude Code | context tool returned correct markdown summary scoped to the contextos-test workspace; the agent parsed it and reformatted naturally; workspace isolation verified (only memories from this workspace shown). Validates Day 6. |
 | 2026-05-19 | CONTEXTOS_HOME env var overrides ~/.contextos | Needed for test isolation on Windows (SpecialFolder.UserProfile reads the registry, not USERPROFILE env var, so subprocess env override does not work). Also useful for non-standard deployments. Both config.json and workspace DBs use this base dir. |
 | 2026-05-18 | Drop sqlite-vec in favor of BLOB cosine scan | Eliminates a native cross-platform dependency. At v1 scale (<10k memories) the speed difference is undetectable. Revisit if v2 workspaces exceed ~50k memories. |

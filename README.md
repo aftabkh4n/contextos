@@ -21,8 +21,24 @@ Three MCP tools are implemented and tested end-to-end with Claude Code:
   branch, recent commits, recent decisions, open todos. Scope can be
   `current`, `week`, or `all`.
 
-Auto-hydration (injecting context on session start via the MCP `initialize`
-handshake) is in progress and will land on Day 9.
+## How it works
+
+When you open Claude Code (or any MCP-compatible client) in a workspace,
+ContextOS responds to the MCP `initialize` handshake with a context blob
+in `serverInfo.instructions`. The client passes this to the model as a
+system-level instruction before any user message.
+
+The blob contains:
+
+- Current git branch and the three most recent commits
+- Open todos and memories tagged "active"
+- Top recent decisions ranked by importance and recency
+
+The agent already knows where you left off. You do not have to ask.
+
+If the workspace has no stored memories and is not a git repo, the
+instructions are a short prompt: "ContextOS connected. No memory yet for
+this workspace. Use the remember tool to store decisions, todos, and notes."
 
 ## Installation
 
@@ -63,7 +79,7 @@ bash scripts/fetch-model.sh
 dotnet test
 ```
 
-All 37 tests should pass. The integration tests spawn the MCP server as a
+All tests should pass. The integration tests spawn the MCP server as a
 subprocess, so the model must be downloaded first.
 
 ### Embeddings model

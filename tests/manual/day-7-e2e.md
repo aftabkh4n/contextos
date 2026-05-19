@@ -100,6 +100,52 @@ Run this after Scenario 1 so there is at least one memory to retrieve.
 
 ---
 
+---
+
+## Scenario 4: Auto-hydration on session start
+
+This verifies that the agent receives workspace context automatically on
+`initialize`, without the user calling any tool.
+
+**Prerequisites:**
+
+- The workspace at `D:/Projects/contextos-test` (or another workspace
+  with stored memories and a git history) is registered with Claude Code.
+- At least one memory has been stored in that workspace (run Scenario 1
+  first if needed).
+
+**Steps:**
+
+1. Exit any running Claude Code session connected to this workspace.
+2. Rebuild: `dotnet build src/ContextOS.Mcp`.
+3. Open Claude Code in the workspace. Let it fully start (the MCP server
+   starts as a subprocess).
+4. Without calling any tool, ask the agent a vague question such as:
+   "What was I working on?"
+
+**What success looks like:**
+
+- The agent answers using the injected context, for example describing the
+  kafka outbox decision or the current git branch.
+- The agent does NOT call `recall` or `context` to find the answer. The
+  information was injected on `initialize`.
+- The response references concrete details that exist in the stored
+  memories or recent commits, not generic filler.
+
+**Where to look if it fails:**
+
+- If the agent says it has no context: check that `serverInfo.instructions`
+  appears in the initialize response. Run the integration test
+  `AutoHydrationTests.Initialize_InstructionsContainsStoredMemoryContent`
+  to isolate the issue.
+- If instructions are empty or contain only the friendly empty-workspace
+  message: confirm the workspace DB has memories (`recall "anything"`).
+- If the agent calls `recall` before answering: the client may not be
+  passing `serverInfo.instructions` to the model. This is a client-side
+  behaviour and outside ContextOS's control.
+
+---
+
 ## After all three scenarios
 
 - [ ] All three tools invoked without errors
