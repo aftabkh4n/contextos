@@ -34,7 +34,7 @@ handshake) is in progress and will land on Day 9.
 ### Setup
 
 ```sh
-git clone https://github.com/bro1o1/contextos
+git clone https://github.com/aftabkh4n/contextos
 cd contextos
 bash scripts/fetch-model.sh   # downloads the ONNX embedding model (~22 MB)
 dotnet build
@@ -57,7 +57,7 @@ the full setup guide, verification steps, and common issues.
 ## Local development
 
 ```sh
-git clone https://github.com/bro1o1/contextos
+git clone https://github.com/aftabkh4n/contextos
 cd contextos
 bash scripts/fetch-model.sh
 dotnet test
