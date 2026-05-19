@@ -30,4 +30,11 @@ public interface IMemoryStore
 
     /// <summary>Returns the workspace with <paramref name="id"/>, or null if not found.</summary>
     Task<Workspace?> GetWorkspaceAsync(string id, CancellationToken ct = default);
+
+    /// <summary>Records a hydration event. Overwrites any existing row for the same session.</summary>
+    Task LogHydrationAsync(
+        string workspaceId,
+        string sessionId,
+        string contextHash,
+        CancellationToken ct = default);
 }
