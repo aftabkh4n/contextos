@@ -112,6 +112,25 @@ public sealed class McpIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Initialize_EmptyWorkspace_InstructionsContainsFriendlyMessage()
+    {
+        // _tempDir has no git and no stored memories, so auto-hydration must return the friendly empty message.
+        using JsonDocument response = await SendRequestAsync("initialize", new
+        {
+            protocolVersion = "2024-11-05",
+            capabilities = new { },
+            clientInfo = new { name = "test", version = "1.0" }
+        });
+
+        JsonElement result = response.RootElement.GetProperty("result");
+        Assert.True(result.TryGetProperty("instructions", out JsonElement instrEl),
+            $"Expected 'instructions' field in initialize result. Got: {result}");
+        string instructions = instrEl.GetString()!;
+        Assert.Contains("ContextOS connected", instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("No memory yet", instructions, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ToolsList_ContainsRememberAndRecall()
     {
         await DoInitHandshakeAsync();
