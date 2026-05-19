@@ -3,6 +3,19 @@ using ContextOS.Storage;
 
 namespace ContextOS.Tests;
 
+/// <summary>Minimal embeddings provider that always returns a fixed-dimension zero vector.</summary>
+file sealed class FixedDimProvider(int dimension) : IEmbeddingsProvider
+{
+    public string Name => "fixed";
+    public int Dimension => dimension;
+
+    public Task<float[]> EmbedAsync(string text, CancellationToken ct = default) =>
+        Task.FromResult(new float[dimension]);
+
+    public Task<float[][]> EmbedBatchAsync(IReadOnlyList<string> texts, CancellationToken ct = default) =>
+        Task.FromResult(texts.Select(_ => new float[dimension]).ToArray());
+}
+
 public sealed class StorageTests : IAsyncLifetime
 {
     private SqliteStore? _store;
@@ -114,6 +127,33 @@ public sealed class StorageTests : IAsyncLifetime
         Assert.Equal("use sqlite", fetched.Content);
         Assert.Equal("infra,db", fetched.Tags);
         Assert.Equal(0.9, fetched.Importance);
+    }
+
+    [Fact]
+    public async Task DimensionMismatch_ThrowsOnOpen()
+    {
+        string dbPath = Path.Combine(Path.GetTempPath(), $"ctos-dim-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            // Create DB and insert a memory with dimension 4.
+            var provider4 = new FixedDimProvider(4);
+            await using SqliteStore store4 = await SqliteStore.OpenAsync(dbPath, provider4);
+            await store4.UpsertWorkspaceAsync(TestWorkspace("ws-dim", "dim"));
+            await store4.AddMemoryAsync("ws-dim", MemoryTypes.Note, "a note");
+
+            // Re-open with dimension 8 — must fail.
+            var provider8 = new FixedDimProvider(8);
+            InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => SqliteStore.OpenAsync(dbPath, provider8));
+
+            Assert.Contains("dimension 4", ex.Message);
+            Assert.Contains("dimension 8", ex.Message);
+            Assert.Contains("reindex from scratch", ex.Message);
+        }
+        finally
+        {
+            try { File.Delete(dbPath); } catch { /* best-effort */ }
+        }
     }
 
     [Fact]

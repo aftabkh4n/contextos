@@ -39,6 +39,10 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
 
         var store = new SqliteStore(conn, embeddings);
         await store.InitAsync(ct);
+
+        if (embeddings is not null)
+            await store.CheckDimensionAsync(embeddings.Dimension, dbPath, ct);
+
         return store;
     }
 
@@ -236,6 +240,33 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
             reader.GetString(2),
             reader.IsDBNull(3) ? null : reader.GetString(3),
             reader.GetInt64(4));
+    }
+
+    // -------------------------------------------------------------------------
+    // Dimension guard
+    // -------------------------------------------------------------------------
+
+    private async Task CheckDimensionAsync(int expectedDim, string dbPath, CancellationToken ct)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "SELECT length(embedding) FROM memories WHERE embedding IS NOT NULL LIMIT 1";
+        object? scalar = await cmd.ExecuteScalarAsync(ct);
+
+        if (scalar is null or DBNull) return; // no indexed memories yet — guard does not fire
+
+        int storedBytes = Convert.ToInt32(scalar);
+        int storedDim = storedBytes / sizeof(float);
+        if (storedDim == expectedDim) return;
+
+        string location = string.Equals(dbPath, ":memory:", StringComparison.OrdinalIgnoreCase)
+            ? ":memory:"
+            : Path.GetFullPath(dbPath);
+
+        throw new InvalidOperationException(
+            $"Workspace was indexed with embeddings of dimension {storedDim} but " +
+            $"the current provider produces dimension {expectedDim}. " +
+            $"Either revert config to a matching provider, or delete the workspace DB at {location} to reindex from scratch. " +
+            "(Reindex tool coming in v2.)");
     }
 
     // -------------------------------------------------------------------------
