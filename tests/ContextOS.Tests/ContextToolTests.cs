@@ -192,6 +192,59 @@ public sealed class ContextToolTests : IAsyncLifetime
     }
 
     // -------------------------------------------------------------------------
+    // Git rendering in scope=current
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Current_WithGitInfo_ShowsBranchAndCommits()
+    {
+        var commits = new List<GitCommit>
+        {
+            new("aabbccdd11223344", "aabbccd", "Add outbox migration", "Dev", DateTimeOffset.UtcNow.AddHours(-2).ToUnixTimeSeconds()),
+            new("1122334455667788", "1122334", "Fix consumer lag", "Dev", DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds()),
+        };
+        var gitInfo = new GitInfo("feature/outbox", commits, UncommittedFileCount: 3);
+
+        string md = await ContextBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, "current", gitInfo);
+
+        Assert.Contains("feature/outbox", md);
+        Assert.Contains("3 uncommitted files", md);
+        Assert.Contains("aabbccd", md);
+        Assert.Contains("Add outbox migration", md);
+        Assert.Contains("1122334", md);
+        Assert.Contains("Fix consumer lag", md);
+    }
+
+    [Fact]
+    public async Task Current_WithNullGitInfo_ShowsNotAGitRepository()
+    {
+        string md = await ContextBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, "current", gitInfo: null);
+
+        Assert.Contains("(not a git repository)", md);
+    }
+
+    [Fact]
+    public async Task Current_WithDetachedHead_ShowsDetachedHead()
+    {
+        var gitInfo = new GitInfo(Branch: null, RecentCommits: [], UncommittedFileCount: 0);
+
+        string md = await ContextBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, "current", gitInfo);
+
+        Assert.Contains("(detached HEAD)", md);
+    }
+
+    [Fact]
+    public async Task Current_WithGitInfoNoUncommitted_NoDirtyNote()
+    {
+        var gitInfo = new GitInfo("main", [], UncommittedFileCount: 0);
+
+        string md = await ContextBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, "current", gitInfo);
+
+        Assert.Contains("main", md);
+        Assert.DoesNotContain("uncommitted", md);
+    }
+
+    // -------------------------------------------------------------------------
     // Helper
     // -------------------------------------------------------------------------
 
