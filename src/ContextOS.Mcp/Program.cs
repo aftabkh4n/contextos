@@ -97,7 +97,8 @@ builder.Services.AddSingleton<ISearch>(search);
 builder.Services.AddMcpServer()
     .WithStdioServerTransport()
     .WithTools<RememberTool>()
-    .WithTools<RecallTool>();
+    .WithTools<RecallTool>()
+    .WithTools<ContextTool>();
 
 await builder.Build().RunAsync();
 return 0;
