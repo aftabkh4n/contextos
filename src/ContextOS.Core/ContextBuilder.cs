@@ -8,7 +8,7 @@ namespace ContextOS.Core;
 /// </summary>
 public static class ContextBuilder
 {
-    private const int MaxBytes = 2048;
+    private const int DefaultMaxBytes = 2048;
     private const string TruncationNote = "\n(truncated to fit 2 KB budget)";
 
     /// <summary>
@@ -20,7 +20,8 @@ public static class ContextBuilder
     /// <param name="scope">One of: current, week, all. Case-insensitive.</param>
     /// <param name="gitInfo">Git state snapshot captured at startup, or null if not a git repo.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Markdown string, always at or under 2 KB.</returns>
+    /// <param name="maxBytes">Maximum size of the returned string in UTF-8 bytes. Defaults to 2048.</param>
+    /// <returns>Markdown string, always at or under <paramref name="maxBytes"/> bytes.</returns>
     /// <exception cref="ArgumentException">Thrown for an unrecognised scope value.</exception>
     public static async Task<string> BuildAsync(
         IMemoryStore store,
@@ -28,7 +29,8 @@ public static class ContextBuilder
         string workspaceName,
         string scope = "current",
         GitInfo? gitInfo = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        int maxBytes = DefaultMaxBytes)
     {
         string normalScope = scope.ToLowerInvariant();
         if (normalScope is not ("current" or "week" or "all"))
@@ -40,9 +42,9 @@ public static class ContextBuilder
 
         return normalScope switch
         {
-            "week" => BuildWeek(workspaceName, all, nowMs),
-            "all"  => BuildAll(workspaceName, all, nowMs),
-            _      => BuildCurrent(workspaceName, all, nowMs, gitInfo),
+            "week" => BuildWeek(workspaceName, all, nowMs, maxBytes),
+            "all"  => BuildAll(workspaceName, all, nowMs, maxBytes),
+            _      => BuildCurrent(workspaceName, all, nowMs, gitInfo, maxBytes),
         };
     }
 
@@ -51,7 +53,7 @@ public static class ContextBuilder
     // -------------------------------------------------------------------------
 
     private static string BuildCurrent(
-        string workspaceName, IReadOnlyList<Memory> all, long nowMs, GitInfo? gitInfo)
+        string workspaceName, IReadOnlyList<Memory> all, long nowMs, GitInfo? gitInfo, int maxBytes)
     {
         List<Memory> activeTasks = all
             .Where(m => m.Type == MemoryTypes.Todo || HasTag(m.Tags, "active"))
@@ -65,10 +67,10 @@ public static class ContextBuilder
             .Take(3)
             .ToList();
 
-        return TruncateCurrent(workspaceName, activeTasks, decisions, nowMs, gitInfo);
+        return TruncateCurrent(workspaceName, activeTasks, decisions, nowMs, gitInfo, maxBytes);
     }
 
-    private static string BuildWeek(string workspaceName, IReadOnlyList<Memory> all, long nowMs)
+    private static string BuildWeek(string workspaceName, IReadOnlyList<Memory> all, long nowMs, int maxBytes)
     {
         long weekAgoMs = nowMs - (7L * 24 * 60 * 60 * 1000);
         List<Memory> items = all
@@ -78,10 +80,10 @@ public static class ContextBuilder
             .ToList();
 
         return TruncateList(workspaceName, "Memories from the last 7 days", items,
-            m => $"- [{m.Type}] {m.Content} (created {FormatAge(m.CreatedAt, nowMs)})");
+            m => $"- [{m.Type}] {m.Content} (created {FormatAge(m.CreatedAt, nowMs)})", maxBytes);
     }
 
-    private static string BuildAll(string workspaceName, IReadOnlyList<Memory> all, long nowMs)
+    private static string BuildAll(string workspaceName, IReadOnlyList<Memory> all, long nowMs, int maxBytes)
     {
         List<Memory> items = all
             .OrderByDescending(m => Scoring.RecencyImportance(m.CreatedAt / 1000, m.Importance, nowMs / 1000))
@@ -89,7 +91,7 @@ public static class ContextBuilder
             .ToList();
 
         return TruncateList(workspaceName, "All memories (by recency and importance)", items,
-            m => $"- [{m.Type}] {m.Content} (importance {m.Importance:F1}, created {FormatAge(m.CreatedAt, nowMs)})");
+            m => $"- [{m.Type}] {m.Content} (importance {m.Importance:F1}, created {FormatAge(m.CreatedAt, nowMs)})", maxBytes);
     }
 
     // -------------------------------------------------------------------------
@@ -172,7 +174,7 @@ public static class ContextBuilder
     // -------------------------------------------------------------------------
 
     private static string TruncateCurrent(
-        string workspaceName, List<Memory> activeTasks, List<Memory> decisions, long nowMs, GitInfo? gitInfo)
+        string workspaceName, List<Memory> activeTasks, List<Memory> decisions, long nowMs, GitInfo? gitInfo, int maxBytes)
     {
         int noteBytes = Encoding.UTF8.GetByteCount(TruncationNote);
         var tasks = new List<Memory>(activeTasks);
@@ -184,20 +186,20 @@ public static class ContextBuilder
             string md = FormatCurrent(workspaceName, tasks, decs, nowMs, gitInfo);
             int mdBytes = Encoding.UTF8.GetByteCount(md);
 
-            if (!truncated && mdBytes <= MaxBytes) return md;
-            if (truncated && mdBytes + noteBytes <= MaxBytes) return md + TruncationNote;
+            if (!truncated && mdBytes <= maxBytes) return md;
+            if (truncated && mdBytes + noteBytes <= maxBytes) return md + TruncationNote;
 
             // Drop oldest decision first (last in the list, since sorted by recency DESC),
             // then oldest active task.
             if (decs.Count > 0) { decs.RemoveAt(decs.Count - 1); truncated = true; continue; }
             if (tasks.Count > 0) { tasks.RemoveAt(tasks.Count - 1); truncated = true; continue; }
 
-            return HardTruncate(md);
+            return HardTruncate(md, maxBytes);
         }
     }
 
     private static string TruncateList(
-        string workspaceName, string sectionTitle, List<Memory> items, Func<Memory, string> lineFormat)
+        string workspaceName, string sectionTitle, List<Memory> items, Func<Memory, string> lineFormat, int maxBytes)
     {
         int noteBytes = Encoding.UTF8.GetByteCount(TruncationNote);
         var remaining = new List<Memory>(items);
@@ -208,18 +210,18 @@ public static class ContextBuilder
             string md = FormatList(workspaceName, sectionTitle, remaining, lineFormat);
             int mdBytes = Encoding.UTF8.GetByteCount(md);
 
-            if (!truncated && mdBytes <= MaxBytes) return md;
-            if (truncated && mdBytes + noteBytes <= MaxBytes) return md + TruncationNote;
+            if (!truncated && mdBytes <= maxBytes) return md;
+            if (truncated && mdBytes + noteBytes <= maxBytes) return md + TruncationNote;
 
             if (remaining.Count > 0) { remaining.RemoveAt(remaining.Count - 1); truncated = true; continue; }
 
-            return HardTruncate(md);
+            return HardTruncate(md, maxBytes);
         }
     }
 
-    private static string HardTruncate(string md)
+    private static string HardTruncate(string md, int maxBytes)
     {
-        int budget = MaxBytes - Encoding.UTF8.GetByteCount(TruncationNote);
+        int budget = maxBytes - Encoding.UTF8.GetByteCount(TruncationNote);
         byte[] bytes = Encoding.UTF8.GetBytes(md);
         if (bytes.Length <= budget) return md + TruncationNote;
         // Walk back to the nearest valid UTF-8 character boundary.
