@@ -51,8 +51,7 @@ public sealed class HybridSearch : ISearch
         foreach ((long rowid, Memory m) in rows)
         {
             if (!rrfScores.TryGetValue(rowid, out double rrf)) continue;
-            double ageDays = (nowMs - m.CreatedAt) / 86_400_000.0;
-            double score = rrf * Math.Exp(-ageDays / 30.0) * (0.5 + m.Importance);
+            double score = rrf * Scoring.RecencyImportance(m.CreatedAt / 1000, m.Importance, nowMs / 1000);
             string[] tags = m.Tags?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
             results.Add(new SearchResult(m.Id, m.Type, m.Content, tags, m.CreatedAt, score));
         }
