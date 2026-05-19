@@ -16,7 +16,7 @@ Complete these steps once before registering the server.
 3. **Clone the repo and fetch the model.**
 
    ```sh
-   git clone https://github.com/bro1o1/contextos
+   git clone https://github.com/aftabkh4n/contextos
    cd contextos
    bash scripts/fetch-model.sh
    ```
