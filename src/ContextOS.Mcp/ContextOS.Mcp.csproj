@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ContextOS.Core\ContextOS.Core.csproj" />
+    <ProjectReference Include="..\ContextOS.Git\ContextOS.Git.csproj" />
     <ProjectReference Include="..\ContextOS.Storage\ContextOS.Storage.csproj" />
     <ProjectReference Include="..\ContextOS.Embeddings\ContextOS.Embeddings.csproj" />
     <ProjectReference Include="..\ContextOS.Retrieval\ContextOS.Retrieval.csproj" />
