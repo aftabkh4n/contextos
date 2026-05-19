@@ -27,12 +27,16 @@ public static class EmbeddingsFactory
     public static IEmbeddingsProvider Create(string? modelsDir = null) =>
         CreateFromConfig(LoadConfig(), modelsDir);
 
-    /// <summary>Creates a provider from an explicit config record.</summary>
+    /// <summary>
+    /// Creates a provider from an explicit config record.
+    /// Throws <see cref="InvalidOperationException"/> or <see cref="ArgumentException"/>
+    /// for invalid configuration (missing API key, unknown model).
+    /// </summary>
     public static IEmbeddingsProvider CreateFromConfig(EmbeddingsConfig cfg, string? modelsDir = null) =>
         cfg.Provider.ToLowerInvariant() switch
         {
-            "ollama" => new OllamaProvider(cfg.OllamaUrl, cfg.OllamaModel),
-            "openai" => new OpenAiProvider(cfg.OpenAiModel, cfg.OpenAiApiKey ?? string.Empty),
+            "ollama" => CreateOllamaProvider(cfg),
+            "openai" => CreateOpenAiProvider(cfg),
             _        => OnnxMiniLmProvider.Create(modelsDir),
         };
 
@@ -61,5 +65,25 @@ public static class EmbeddingsFactory
             // Malformed config — use defaults rather than crashing.
             return new EmbeddingsConfig();
         }
+    }
+
+    private static OllamaProvider CreateOllamaProvider(EmbeddingsConfig cfg) =>
+        new(cfg.OllamaUrl, cfg.OllamaModel,
+            new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
+
+    private static OpenAiProvider CreateOpenAiProvider(EmbeddingsConfig cfg)
+    {
+        // Environment variable wins over config file, matching conventions of other tools.
+        string apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+                        ?? cfg.OpenAiApiKey
+                        ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+            throw new InvalidOperationException(
+                "OpenAI API key is required. Set openAiApiKey in ~/.contextos/config.json " +
+                "or set the OPENAI_API_KEY environment variable.");
+
+        return new OpenAiProvider(cfg.OpenAiModel, apiKey,
+            new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
     }
 }
