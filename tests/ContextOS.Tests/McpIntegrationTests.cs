@@ -195,6 +195,38 @@ public sealed class McpIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ToolsList_ContainsContext()
+    {
+        await DoInitHandshakeAsync();
+
+        using JsonDocument response = await SendRequestAsync("tools/list", new { });
+
+        JsonElement tools = response.RootElement.GetProperty("result").GetProperty("tools");
+        var names = tools.EnumerateArray()
+            .Select(t => t.GetProperty("name").GetString())
+            .ToHashSet();
+
+        Assert.Contains("context", names);
+    }
+
+    [Fact]
+    public async Task Context_NoArgs_ReturnsMarkdownWithAllSectionHeaders()
+    {
+        await DoInitHandshakeAsync();
+
+        using JsonDocument response = await CallToolAsync("context", new { });
+
+        JsonElement result = response.RootElement.GetProperty("result");
+        Assert.False(IsError(result), $"Expected isError=false. Response: {result}");
+
+        string text = result.GetProperty("content")[0].GetProperty("text").GetString()!;
+        Assert.Contains("# ContextOS workspace:", text);
+        Assert.Contains("## Branch", text);
+        Assert.Contains("## Active tasks", text);
+        Assert.Contains("## Recent decisions", text);
+    }
+
+    [Fact]
     public async Task ServerRemainsAlive_AfterToolError()
     {
         await DoInitHandshakeAsync();
