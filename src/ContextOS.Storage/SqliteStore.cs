@@ -239,6 +239,30 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
     }
 
     // -------------------------------------------------------------------------
+    // Hydration log
+    // -------------------------------------------------------------------------
+
+    /// <summary>Records a hydration event in <c>hydration_log</c>. Overwrites any existing row for the same session.</summary>
+    public async Task LogHydrationAsync(
+        string workspaceId,
+        string sessionId,
+        string contextHash,
+        CancellationToken ct = default)
+    {
+        long hydratedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = """
+            INSERT OR REPLACE INTO hydration_log (workspace_id, session_id, hydrated_at, context_hash)
+            VALUES (@workspaceId, @sessionId, @hydratedAt, @contextHash)
+            """;
+        cmd.Parameters.AddWithValue("@workspaceId", workspaceId);
+        cmd.Parameters.AddWithValue("@sessionId", sessionId);
+        cmd.Parameters.AddWithValue("@hydratedAt", hydratedAt);
+        cmd.Parameters.AddWithValue("@contextHash", contextHash);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
