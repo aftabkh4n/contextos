@@ -17,6 +17,6 @@ public sealed class ContextTool(IMemoryStore store, WorkspaceContext ws)
             ws.RootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
             ?? ws.WorkspaceId;
 
-        return ContextBuilder.BuildAsync(store, ws.WorkspaceId, workspaceName, scope, ct);
+        return ContextBuilder.BuildAsync(store, ws.WorkspaceId, workspaceName, scope, ws.GitInfo, ct);
     }
 }

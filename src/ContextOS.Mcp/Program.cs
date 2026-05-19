@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using ContextOS.Core;
 using ContextOS.Embeddings;
+using ContextOS.Git;
 using ContextOS.Mcp;
 using ContextOS.Mcp.Tools;
 using ContextOS.Retrieval;
@@ -9,6 +10,7 @@ using ContextOS.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 // --selftest: validate the embeddings provider and exit. Used by CI smoke tests.
 if (args.Contains("--selftest"))
@@ -32,9 +34,9 @@ if (args.Contains("--selftest"))
     }
 }
 
-// Detect workspace root: walk up from cwd looking for .git.
+// Detect workspace root via LibGit2Sharp repository discovery, falling back to cwd.
 string cwd = Directory.GetCurrentDirectory();
-string workspaceRoot = FindGitRoot(cwd) ?? cwd;
+string workspaceRoot = LibGit2SharpProbe.DiscoverRoot(cwd) ?? cwd;
 string workspaceId = ComputeWorkspaceId(workspaceRoot);
 string workspaceName = Path.GetFileName(workspaceRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                        ?? workspaceId;
@@ -75,6 +77,10 @@ catch (Exception ex)
     return 1;
 }
 
+// Probe git once at startup. On failure (no repo / library error) gitInfo is null.
+var gitProbe = new LibGit2SharpProbe(NullLogger<LibGit2SharpProbe>.Instance);
+GitInfo? gitInfo = gitProbe.Probe(workspaceRoot);
+
 SqliteStore store = await SqliteStore.OpenAsync(dbPath, embeddings);
 
 var workspace = new Workspace(workspaceId, workspaceRoot, workspaceName, null,
@@ -82,7 +88,7 @@ var workspace = new Workspace(workspaceId, workspaceRoot, workspaceName, null,
 await store.UpsertWorkspaceAsync(workspace);
 
 var search = new HybridSearch(store.Connection, embeddings);
-var workspaceCtx = new WorkspaceContext(workspaceId, workspaceRoot);
+var workspaceCtx = new WorkspaceContext(workspaceId, workspaceRoot, gitInfo);
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
@@ -93,6 +99,7 @@ builder.Logging.AddConsole(opts => opts.LogToStandardErrorThreshold = LogLevel.T
 builder.Services.AddSingleton<WorkspaceContext>(workspaceCtx);
 builder.Services.AddSingleton<IMemoryStore>(store);
 builder.Services.AddSingleton<ISearch>(search);
+builder.Services.AddSingleton<IGitProbe, LibGit2SharpProbe>();
 
 builder.Services.AddMcpServer()
     .WithStdioServerTransport()
@@ -126,18 +133,6 @@ static void WriteEmbeddingError(string providerName, string detail)
 
         See docs/CONFIG.md (when written) or PROJECT.md section 8.
         """);
-}
-
-static string? FindGitRoot(string start)
-{
-    string? dir = start;
-    while (dir is not null)
-    {
-        if (Directory.Exists(Path.Combine(dir, ".git")))
-            return dir;
-        dir = Path.GetDirectoryName(dir);
-    }
-    return null;
 }
 
 static string ComputeWorkspaceId(string path) =>
