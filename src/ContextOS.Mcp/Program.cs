@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol.Server;
 
 // --selftest: validate the embeddings provider and exit. Used by CI smoke tests.
 if (args.Contains("--selftest"))
@@ -90,6 +91,14 @@ await store.UpsertWorkspaceAsync(workspace);
 var search = new HybridSearch(store.Connection, embeddings);
 var workspaceCtx = new WorkspaceContext(workspaceId, workspaceRoot, gitInfo);
 
+// Generate a per-process session ID — one server process equals one session.
+string sessionId = UlidHelper.NewUlid();
+
+// Build the hydration blob and log it before starting the server.
+string hydrationBlob = await HydrationBuilder.BuildAsync(store, workspaceId, workspaceName, gitInfo);
+string contextHash = HydrationBuilder.ComputeHash(hydrationBlob);
+await store.LogHydrationAsync(workspaceId, sessionId, contextHash);
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 // All logging goes to stderr so we don't corrupt the JSON-RPC stdio stream.
@@ -101,7 +110,10 @@ builder.Services.AddSingleton<IMemoryStore>(store);
 builder.Services.AddSingleton<ISearch>(search);
 builder.Services.AddSingleton<IGitProbe, LibGit2SharpProbe>();
 
-builder.Services.AddMcpServer()
+builder.Services.AddMcpServer(options =>
+    {
+        options.ServerInstructions = hydrationBlob;
+    })
     .WithStdioServerTransport()
     .WithTools<RememberTool>()
     .WithTools<RecallTool>()
