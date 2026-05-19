@@ -18,6 +18,7 @@ public static class ContextBuilder
     /// <param name="workspaceId">Workspace identifier.</param>
     /// <param name="workspaceName">Display name (e.g. the repo directory name).</param>
     /// <param name="scope">One of: current, week, all. Case-insensitive.</param>
+    /// <param name="gitInfo">Git state snapshot captured at startup, or null if not a git repo.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Markdown string, always at or under 2 KB.</returns>
     /// <exception cref="ArgumentException">Thrown for an unrecognised scope value.</exception>
@@ -26,6 +27,7 @@ public static class ContextBuilder
         string workspaceId,
         string workspaceName,
         string scope = "current",
+        GitInfo? gitInfo = null,
         CancellationToken ct = default)
     {
         string normalScope = scope.ToLowerInvariant();
@@ -40,7 +42,7 @@ public static class ContextBuilder
         {
             "week" => BuildWeek(workspaceName, all, nowMs),
             "all"  => BuildAll(workspaceName, all, nowMs),
-            _      => BuildCurrent(workspaceName, all, nowMs),
+            _      => BuildCurrent(workspaceName, all, nowMs, gitInfo),
         };
     }
 
@@ -48,7 +50,8 @@ public static class ContextBuilder
     // Scope builders
     // -------------------------------------------------------------------------
 
-    private static string BuildCurrent(string workspaceName, IReadOnlyList<Memory> all, long nowMs)
+    private static string BuildCurrent(
+        string workspaceName, IReadOnlyList<Memory> all, long nowMs, GitInfo? gitInfo)
     {
         List<Memory> activeTasks = all
             .Where(m => m.Type == MemoryTypes.Todo || HasTag(m.Tags, "active"))
@@ -62,7 +65,7 @@ public static class ContextBuilder
             .Take(3)
             .ToList();
 
-        return TruncateCurrent(workspaceName, activeTasks, decisions, nowMs);
+        return TruncateCurrent(workspaceName, activeTasks, decisions, nowMs, gitInfo);
     }
 
     private static string BuildWeek(string workspaceName, IReadOnlyList<Memory> all, long nowMs)
@@ -94,13 +97,41 @@ public static class ContextBuilder
     // -------------------------------------------------------------------------
 
     private static string FormatCurrent(
-        string workspaceName, List<Memory> activeTasks, List<Memory> decisions, long nowMs)
+        string workspaceName, List<Memory> activeTasks, List<Memory> decisions, long nowMs, GitInfo? gitInfo)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"# ContextOS workspace: {workspaceName}");
         sb.AppendLine();
         sb.AppendLine("## Branch");
-        sb.AppendLine("(git probe not yet wired)");
+
+        if (gitInfo is null)
+        {
+            sb.AppendLine("(not a git repository)");
+        }
+        else if (gitInfo.Branch is null)
+        {
+            sb.AppendLine("(detached HEAD)");
+        }
+        else
+        {
+            string dirtyNote = gitInfo.UncommittedFileCount > 0
+                ? $" ({gitInfo.UncommittedFileCount} uncommitted file{(gitInfo.UncommittedFileCount == 1 ? "" : "s")})"
+                : "";
+            sb.AppendLine($"{gitInfo.Branch}{dirtyNote}");
+
+            if (gitInfo.RecentCommits.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Recent commits:");
+                long nowUnix = nowMs / 1000;
+                foreach (GitCommit c in gitInfo.RecentCommits.Take(3))
+                {
+                    string age = FormatAge(c.CommittedAtUnix * 1000, nowMs);
+                    sb.AppendLine($"- {c.ShortSha} ({age}) {c.Message}");
+                }
+            }
+        }
+
         sb.AppendLine();
         sb.AppendLine("## Active tasks");
         if (activeTasks.Count == 0)
@@ -141,7 +172,7 @@ public static class ContextBuilder
     // -------------------------------------------------------------------------
 
     private static string TruncateCurrent(
-        string workspaceName, List<Memory> activeTasks, List<Memory> decisions, long nowMs)
+        string workspaceName, List<Memory> activeTasks, List<Memory> decisions, long nowMs, GitInfo? gitInfo)
     {
         int noteBytes = Encoding.UTF8.GetByteCount(TruncationNote);
         var tasks = new List<Memory>(activeTasks);
@@ -150,7 +181,7 @@ public static class ContextBuilder
 
         while (true)
         {
-            string md = FormatCurrent(workspaceName, tasks, decs, nowMs);
+            string md = FormatCurrent(workspaceName, tasks, decs, nowMs, gitInfo);
             int mdBytes = Encoding.UTF8.GetByteCount(md);
 
             if (!truncated && mdBytes <= MaxBytes) return md;
