@@ -58,7 +58,7 @@ public static class ContextBuilder
 
         List<Memory> decisions = all
             .Where(m => m.Type == MemoryTypes.Decision)
-            .OrderByDescending(m => RecencyScore(m, nowMs))
+            .OrderByDescending(m => Scoring.RecencyImportance(m.CreatedAt / 1000, m.Importance, nowMs / 1000))
             .Take(3)
             .ToList();
 
@@ -81,7 +81,7 @@ public static class ContextBuilder
     private static string BuildAll(string workspaceName, IReadOnlyList<Memory> all, long nowMs)
     {
         List<Memory> items = all
-            .OrderByDescending(m => RecencyScore(m, nowMs))
+            .OrderByDescending(m => Scoring.RecencyImportance(m.CreatedAt / 1000, m.Importance, nowMs / 1000))
             .Take(50)
             .ToList();
 
@@ -199,12 +199,6 @@ public static class ContextBuilder
     // -------------------------------------------------------------------------
     // Utilities
     // -------------------------------------------------------------------------
-
-    private static double RecencyScore(Memory m, long nowMs)
-    {
-        double ageDays = Math.Max(0, nowMs - m.CreatedAt) / 86_400_000.0;
-        return Math.Exp(-ageDays / 30.0) * (0.5 + m.Importance);
-    }
 
     private static bool HasTag(string? tags, string target) =>
         tags is not null &&
