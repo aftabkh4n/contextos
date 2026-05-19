@@ -47,6 +47,24 @@ If a design choice is not covered in `PROJECT.md`:
 
 If a choice is large enough to change scope or architecture, ask first.
 
+## Development workflow
+
+### File lock workaround
+
+ContextOS.Mcp is invoked as a subprocess by any Claude Code session that
+has it registered. While that session is alive, ContextOS.Mcp's DLLs are
+locked and `dotnet build` will fail with MSB3027 errors.
+
+Before rebuilding during development:
+  1. Exit the Claude Code session that has contextos registered, OR
+  2. Run `claude mcp remove contextos` to temporarily unregister
+
+After rebuilding, restore with:
+  `claude mcp add --scope user contextos -- dotnet run --project /path/to/contextos/src/ContextOS.Mcp --no-build`
+
+For local dev only. Production users won't see this because they invoke
+the published binary, not `dotnet run`.
+
 ## Definition of done for any task
 
 - Compiles with no warnings.
