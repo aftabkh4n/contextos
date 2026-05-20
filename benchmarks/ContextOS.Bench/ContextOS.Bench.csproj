@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ContextOS.Core\ContextOS.Core.csproj" />
+    <ProjectReference Include="..\..\src\ContextOS.Storage\ContextOS.Storage.csproj" />
+    <ProjectReference Include="..\..\src\ContextOS.Retrieval\ContextOS.Retrieval.csproj" />
+    <ProjectReference Include="..\..\src\ContextOS.Embeddings\ContextOS.Embeddings.csproj" />
+  </ItemGroup>
+
+</Project>
