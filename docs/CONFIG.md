@@ -122,6 +122,29 @@ reindex is still recommended.
 
 ---
 
+## Logging
+
+ContextOS writes logs to `~/.contextos/logs/contextos-{date}.log` with daily rotation.
+Nothing is written to stdout or stderr during normal operation (those streams are
+reserved for the MCP JSON-RPC transport).
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `logging.level` | `"Information"` | Minimum log level. One of: `Verbose`, `Debug`, `Information`, `Warning`, `Error`, `Fatal`. |
+
+```json
+{
+  "logging": {
+    "level": "Debug"
+  }
+}
+```
+
+The log directory is always `{CONTEXTOS_HOME}/logs/`. Override the base directory
+with the `CONTEXTOS_HOME` environment variable if you need logs somewhere else.
+
+---
+
 ## Hydration
 
 Controls how much context is injected into the MCP `initialize` response.
