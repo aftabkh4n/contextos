@@ -2,6 +2,22 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <AssemblyName>contextos</AssemblyName>
+    <!-- Self-contained single-file: pass -r <rid> to dotnet publish explicitly. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- NU5119: .gitkeep in Models/ is intentionally excluded from the nupkg. -->
+    <NoWarn>$(NoWarn);NU5119</NoWarn>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>contextos</ToolCommandName>
+    <PackageId>ContextOS</PackageId>
+    <Authors>Aftab Bashir</Authors>
+    <Description>Persistent engineering context for AI coding agents (MCP server).</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/aftabkh4n/contextos</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/aftabkh4n/contextos</RepositoryUrl>
+    <PackageTags>mcp;ai;memory;coding-agent;claude;cursor</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

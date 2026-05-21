@@ -41,7 +41,9 @@ internal static class CliPrinter
 
         if (isDotnetExec)
         {
+#pragma warning disable IL3000 // Assembly.Location is valid here: isDotnetExec=true means we are not inside a single-file bundle
             string dllPath = typeof(CliPrinter).Assembly.Location;
+#pragma warning restore IL3000
             Console.WriteLine("--- Claude Code (run once in your terminal) ---");
             Console.WriteLine($"claude mcp add --scope user contextos -- dotnet exec \"{dllPath}\" serve");
             Console.WriteLine();
