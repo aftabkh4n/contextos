@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to simulate (e.g. v0.1.0-test)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Cache embeddings model
+        id: cache-model
+        uses: actions/cache@v4
+        with:
+          path: src/ContextOS.Embeddings/Models
+          key: minilm-l6-v2-onnx-v1
+
+      - name: Fetch embeddings model
+        if: steps.cache-model.outputs.cache-hit != 'true'
+        run: bash scripts/fetch-model.sh
+
+      - name: Build
+        run: dotnet build --no-restore /p:TreatWarningsAsErrors=true
+
+      - name: Test
+        run: dotnet test --no-build --verbosity normal
+
+      - name: Publish all RIDs
+        run: |
+          mkdir -p dist
+          for rid in win-x64 linux-x64 osx-arm64 osx-x64; do
+            echo "Publishing $rid..."
+            dotnet publish src/ContextOS.Mcp -c Release -r "$rid" \
+              --self-contained true \
+              -o "dist/$rid"
+            case "$rid" in
+              win-*)
+                (cd dist && zip -r "contextos-$rid.zip" "$rid")
+                ;;
+              *)
+                (cd dist && tar czf "contextos-$rid.tar.gz" "$rid")
+                ;;
+            esac
+          done
+          ls -lh dist/*.zip dist/*.tar.gz
+
+      - name: Pack .NET tool
+        run: dotnet pack src/ContextOS.Mcp -c Release -o dist/nupkg
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.value }}
+          name: ContextOS ${{ steps.tag.outputs.value }}
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.value, '-') }}
+          files: |
+            dist/contextos-win-x64.zip
+            dist/contextos-linux-x64.tar.gz
+            dist/contextos-osx-arm64.tar.gz
+            dist/contextos-osx-x64.tar.gz
+            dist/nupkg/*.nupkg
+
+      # NuGet publish — enabled on Day 14 once the package name is confirmed.
+      # - name: Push to NuGet
+      #   run: dotnet nuget push dist/nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
