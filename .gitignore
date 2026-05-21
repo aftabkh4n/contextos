@@ -484,3 +484,6 @@ $RECYCLE.BIN/
 # ContextOS: model files are downloaded by scripts/fetch-model.sh, not committed
 src/ContextOS.Embeddings/Models/*.onnx
 src/ContextOS.Embeddings/Models/vocab.txt
+
+# ContextOS: local publish output
+dist/
