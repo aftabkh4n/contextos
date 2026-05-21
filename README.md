@@ -42,21 +42,63 @@ this workspace. Use the remember tool to store decisions, todos, and notes."
 
 ## Installation
 
-### Prerequisites
+### Download a release binary (no .NET required)
 
-1. **Install .NET 10 SDK** from [dot.net](https://dot.net/download).
-2. **Install Claude Code** from [claude.ai/code](https://claude.ai/code).
+Download the latest release for your platform from the
+[releases page](https://github.com/aftabkh4n/contextos/releases/latest).
 
-### Setup
+```sh
+# macOS (Apple Silicon)
+curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz | tar xz
+./osx-arm64/contextos --version
+```
+
+```sh
+# Linux
+curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-linux-x64.tar.gz | tar xz
+./linux-x64/contextos --version
+```
+
+```powershell
+# Windows (PowerShell)
+Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile "contextos.zip"
+Expand-Archive contextos.zip
+.\contextos\win-x64\contextos.exe --version
+```
+
+```sh
+# Or via .NET tool (if you have .NET 10 installed)
+dotnet tool install -g ContextOS
+```
+
+### Register with Claude Code
+
+After downloading, register the binary with Claude Code:
+
+```sh
+# macOS / Linux
+claude mcp add --scope user contextos -- /path/to/contextos
+
+# Windows
+claude mcp add --scope user contextos -- C:\path\to\contextos.exe
+```
+
+See [examples/claude-code-config](examples/claude-code-config/README.md) for
+the full setup guide, verification steps, and common issues.
+
+## Development setup
+
+For contributors only. End users should use the release binary above.
 
 ```sh
 git clone https://github.com/aftabkh4n/contextos
 cd contextos
 bash scripts/fetch-model.sh   # downloads the ONNX embedding model (~22 MB)
 dotnet build
+dotnet test
 ```
 
-### Register with Claude Code
+Register with Claude Code from source:
 
 ```sh
 claude mcp add --scope user contextos -- dotnet run \
@@ -66,21 +108,6 @@ claude mcp add --scope user contextos -- dotnet run \
 
 Replace `/path/to/contextos` with the absolute path where you cloned the repo.
 Use forward slashes even on Windows.
-
-See [examples/claude-code-config](examples/claude-code-config/README.md) for
-the full setup guide, verification steps, and common issues.
-
-## Local development
-
-```sh
-git clone https://github.com/aftabkh4n/contextos
-cd contextos
-bash scripts/fetch-model.sh
-dotnet test
-```
-
-All tests should pass. The integration tests spawn the MCP server as a
-subprocess, so the model must be downloaded first.
 
 ### Embeddings model
 
