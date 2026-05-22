@@ -8,8 +8,6 @@
          injects bundle-mode metadata into the regular build output, which
          breaks dotnet exec in tests. -->
     <PublishTrimmed>false</PublishTrimmed>
-    <!-- NU5119: .gitkeep in Models/ is intentionally excluded from the nupkg. -->
-    <NoWarn>$(NoWarn);NU5119</NoWarn>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>contextos</ToolCommandName>
     <PackageId>ContextOS</PackageId>
@@ -36,5 +34,25 @@
     <ProjectReference Include="..\ContextOS.Embeddings\ContextOS.Embeddings.csproj" />
     <ProjectReference Include="..\ContextOS.Retrieval\ContextOS.Retrieval.csproj" />
   </ItemGroup>
+
+  <!-- Keep the .NET tool package framework-dependent and small.
+       PackTool globs everything from $(PublishDir) into the nupkg's tools/ folder.
+       This target deletes native runtime libs and the ONNX model from the publish
+       directory before PackTool runs, so they are never included in the nupkg.
+       Runs only during dotnet pack (_IsPacking=true); standalone dotnet publish
+       is unaffected. Self-contained binaries publish independently and include
+       all native assets and the model for their target platform. -->
+  <Target Name="ExcludeHeavyAssetsFromNupkg"
+          AfterTargets="Publish"
+          BeforeTargets="PackTool"
+          Condition="'$(_IsPacking)' == 'true'">
+    <ItemGroup>
+      <_HeavyPublishFiles Include="$(PublishDir)Models\**\*" />
+      <_HeavyPublishFiles Include="$(PublishDir)runtimes\**\native\**\*" />
+      <_HeavyPublishFiles Include="$(PublishDir)runtimes\**\nativeassets\**\*" />
+    </ItemGroup>
+    <Delete Files="@(_HeavyPublishFiles)" ContinueOnError="true" />
+    <Message Text="Pack: stripped native libs and ONNX model from publish dir." Importance="High" />
+  </Target>
 
 </Project>
