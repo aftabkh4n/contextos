@@ -3,9 +3,10 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>contextos</AssemblyName>
-    <!-- Self-contained single-file: pass -r <rid> to dotnet publish explicitly. -->
-    <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- PublishSingleFile and IncludeNativeLibrariesForSelfExtract are passed
+         as -p: arguments to dotnet publish only. Keeping them in the csproj
+         injects bundle-mode metadata into the regular build output, which
+         breaks dotnet exec in tests. -->
     <PublishTrimmed>false</PublishTrimmed>
     <!-- NU5119: .gitkeep in Models/ is intentionally excluded from the nupkg. -->
     <NoWarn>$(NoWarn);NU5119</NoWarn>

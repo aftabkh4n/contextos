@@ -11,6 +11,8 @@ for rid in "${RIDS[@]}"; do
   echo "Publishing $rid..."
   dotnet publish src/ContextOS.Mcp -c Release -r "$rid" \
     --self-contained true \
+    -p:PublishSingleFile=true \
+    -p:IncludeNativeLibrariesForSelfExtract=true \
     -o "$OUTDIR/$rid"
 
   case "$rid" in

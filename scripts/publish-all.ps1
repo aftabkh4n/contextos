@@ -11,6 +11,8 @@ foreach ($rid in $rids) {
     Write-Host "Publishing $rid..."
     dotnet publish src/ContextOS.Mcp -c Release -r $rid `
         --self-contained true `
+        -p:PublishSingleFile=true `
+        -p:IncludeNativeLibrariesForSelfExtract=true `
         -o "$outDir/$rid"
 
     if ($rid -like 'win-*') {
