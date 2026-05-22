@@ -77,6 +77,11 @@ jobs:
             echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Delete existing release for this tag (if any)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete "${{ steps.tag.outputs.value }}" --yes || true
+
       - name: Create GitHub Release and upload assets
         uses: softprops/action-gh-release@v2
         with:
