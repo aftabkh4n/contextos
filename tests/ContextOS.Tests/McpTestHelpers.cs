@@ -11,11 +11,21 @@ internal static class McpTestHelpers
             {
                 foreach (string config in new[] { "Debug", "Release" })
                 {
-                    string dll = Path.Combine(dir, "src", "ContextOS.Mcp", "bin", config, "net10.0", "ContextOS.Mcp.dll");
-                    if (File.Exists(dll)) return dll;
+                    // Day 12: AssemblyName changed to "contextos". Fall back to the old
+                    // name so a stale build without the rename does not silently break.
+                    // Also require the runtimeconfig: a DLL without one is a stale artifact
+                    // from a previous AssemblyName and will fail under dotnet exec.
+                    foreach (string name in new[] { "contextos.dll", "ContextOS.Mcp.dll" })
+                    {
+                        string dll = Path.Combine(dir, "src", "ContextOS.Mcp", "bin", config, "net10.0", name);
+                        string runtimeconfig = Path.ChangeExtension(dll, null) + ".runtimeconfig.json";
+                        if (File.Exists(dll) && File.Exists(runtimeconfig)) return dll;
+                    }
                 }
                 throw new FileNotFoundException(
-                    $"ContextOS.Mcp.dll not found under {dir}/src/ContextOS.Mcp/bin/. Build the solution first.");
+                    "MCP assembly not found under src/ContextOS.Mcp/bin/. " +
+                    "Expected contextos.dll (or ContextOS.Mcp.dll) with a matching runtimeconfig. " +
+                    "Build the solution first.");
             }
             dir = Path.GetDirectoryName(dir);
         }
