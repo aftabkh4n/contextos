@@ -33,8 +33,10 @@ stored.
 
 ### onnx (default)
 
-No setup required. Runs `all-MiniLM-L6-v2` locally via ONNX Runtime.
-Download the model with:
+No setup required for release binary installs. The model is bundled inside
+the binary and extracted automatically on first run.
+
+For contributors building from source, fetch the model manually:
 
 ```sh
 bash scripts/fetch-model.sh
