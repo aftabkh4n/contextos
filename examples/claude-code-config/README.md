@@ -9,19 +9,34 @@ so that `remember`, `recall`, and `context` are available in every session.
 
 This is the recommended path. No .NET SDK required.
 
-1. **Download the binary for your platform** from the
-   [releases page](https://github.com/aftabkh4n/contextos/releases/latest)
-   and place it somewhere permanent on your PATH. See [docs/INSTALL.md](../../docs/INSTALL.md)
-   for per-platform instructions including extraction steps.
+1. **Download and extract the binary** for your platform. See
+   [docs/INSTALL.md](../../docs/INSTALL.md) for per-platform instructions.
+   The short version:
+
+   ```sh
+   # macOS / Linux
+   mkdir -p "$HOME/.local/share/contextos"
+   curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz \
+     | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
+   # (replace osx-arm64 with osx-x64 or linux-x64 as appropriate)
+   ```
+
+   ```powershell
+   # Windows
+   Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip
+   Expand-Archive contextos.zip -DestinationPath "$env:LOCALAPPDATA\Programs\contextos" -Force
+   ```
 
 2. **Register with Claude Code.**
 
    ```sh
-   # macOS / Linux (adjust path if you placed the binary elsewhere)
-   claude mcp add --scope user contextos -- /usr/local/bin/contextos
+   # macOS / Linux
+   claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos"
+   ```
 
+   ```powershell
    # Windows
-   claude mcp add --scope user contextos -- C:\tools\contextos.exe
+   claude mcp add --scope user contextos -- "$env:LOCALAPPDATA\Programs\contextos\win-x64\contextos.exe"
    ```
 
    The `--scope user` flag makes the server available in every project,
