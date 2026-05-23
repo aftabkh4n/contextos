@@ -8,17 +8,31 @@ Estimated time: 10-15 minutes.
 
 ## Setup
 
-- [ ] `bash scripts/fetch-model.sh` completed without errors
-- [ ] `dotnet build` completed without errors in the repo root
+Use either a release binary or a source build.
+
+**Release binary (preferred for pre-release testing):**
+- [ ] Downloaded and placed the binary at a permanent path.
+- [ ] `contextos --version` prints the expected version.
+- [ ] `contextos --selftest` reports dimension 384 without errors.
+- [ ] Server registered with Claude Code:
+  ```sh
+  claude mcp add --scope user contextos -- /path/to/contextos
+  ```
+
+**Source build:**
+- [ ] `bash scripts/fetch-model.sh` completed without errors.
+- [ ] `dotnet build` completed without errors in the repo root.
 - [ ] Server registered with Claude Code:
   ```sh
   claude mcp add --scope user contextos -- dotnet run \
     --project /path/to/contextos/src/ContextOS.Mcp \
     --no-build
   ```
-- [ ] `claude mcp list` shows `contextos` with status OK (not failed)
+
+**Both paths:**
+- [ ] `claude mcp list` shows `contextos` with status OK (not failed).
 - [ ] `/mcp` inside a Claude Code session shows all three tools:
-  `remember`, `recall`, `context`
+  `remember`, `recall`, `context`.
 
 ## Scenario 1: remember
 
@@ -146,10 +160,54 @@ This verifies that the agent receives workspace context automatically on
 
 ---
 
-## After all three scenarios
+## After all four scenarios
 
 - [ ] All three tools invoked without errors
 - [ ] Memory stored in Scenario 1 was returned in Scenario 2
 - [ ] Context block in Scenario 3 showed the correct workspace and the stored memory
+- [ ] Auto-hydration in Scenario 4 surfaced context without a tool call
 - [ ] No server crashes visible in the Claude Code sidebar
 - [ ] `~/.contextos/` contains exactly one `.db` file for this workspace
+
+---
+
+## Pre-release checklist
+
+Run this in addition to the four scenarios above before tagging any release.
+
+### Binary verification
+
+- [ ] Download the release binary for your platform from the draft release
+      (or build with `scripts/publish-all.sh`).
+- [ ] `contextos --version` prints the expected version string.
+- [ ] `contextos --selftest` reports dimension 384 (ONNX) without errors.
+
+### Registration
+
+- [ ] `claude mcp add --scope user contextos -- /path/to/binary` succeeds.
+- [ ] `claude mcp list` shows `contextos` with no "failed" status.
+- [ ] `/mcp` inside Claude Code shows all three tools.
+
+### Docs smoke test
+
+Follow the README Install section step-by-step on a clean machine (or a shell
+with no prior contextos registration). Fix any step that does not work as written.
+
+- [ ] Download and install step worked without extra guidance.
+- [ ] Registration step worked as written.
+- [ ] First-five-minutes section produced the expected results.
+
+### .nupkg check
+
+- [ ] `dotnet pack src/ContextOS.Mcp -c Release` produces a `.nupkg` under 5 MB.
+- [ ] `dotnet tool install -g ContextOS --add-source dist/nupkg` installs without errors.
+- [ ] `contextos --version` works after tool install.
+- [ ] `contextos --selftest` fails with a clear provider-not-configured message
+      (expected: the tool package has no bundled model).
+
+### Final sign-off
+
+- [ ] All four e2e scenarios passed.
+- [ ] All pre-release checklist items passed.
+- [ ] DECISIONS.md is up to date with any choices made during the release prep.
+- [ ] README and INSTALL.md accurately describe the version being released.
