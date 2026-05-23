@@ -188,14 +188,22 @@ Run this in addition to the four scenarios above before tagging any release.
 - [ ] `claude mcp list` shows `contextos` with no "failed" status.
 - [ ] `/mcp` inside Claude Code shows all three tools.
 
-### Docs smoke test
+### Fresh-shell smoke test
 
-Follow the README Install section step-by-step on a clean machine (or a shell
-with no prior contextos registration). Fix any step that does not work as written.
+Open a **new** terminal or PowerShell window with no prior contextos session
+active. Follow the README Install section word for word from the top. The goal
+is to catch any step that requires knowledge not stated in the docs.
 
-- [ ] Download and install step worked without extra guidance.
-- [ ] Registration step worked as written.
-- [ ] First-five-minutes section produced the expected results.
+- [ ] `claude mcp remove contextos` first (if already registered), so the test
+      starts clean.
+- [ ] Download and extract completed without errors or extra steps.
+- [ ] `--version` ran using the full extracted path (no PATH changes needed).
+- [ ] `claude mcp add` completed using the full extracted path.
+- [ ] `claude mcp list` shows `contextos` without requiring a shell restart.
+- [ ] `/mcp` inside Claude Code shows all three tools in a fresh session.
+- [ ] "First five minutes" section: auto-hydration answered "What was I working
+      on?" without calling any tool.
+- [ ] Every command in the README ran exactly as written, with no workarounds.
 
 ### .nupkg check
 
