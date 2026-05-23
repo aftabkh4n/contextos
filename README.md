@@ -26,38 +26,74 @@ Storage is local SQLite, one file per workspace under `~/.contextos/`.
 
 ## Install
 
+> **v0.1.0 is the first release.** If downloading from "latest" returns a 404,
+> the release has not been published yet. Check the
+> [Releases tab](https://github.com/aftabkh4n/contextos/releases).
+
 ### macOS (Apple Silicon)
 
 ```sh
-curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz | tar xz
-sudo mv osx-arm64/contextos /usr/local/bin/contextos
-contextos --version
+# Extract to a permanent location (no sudo required)
+mkdir -p "$HOME/.local/share/contextos"
+curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz \
+  | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
+
+# Verify
+"$HOME/.local/share/contextos/contextos" --version
+
+# Register with Claude Code (full path, works without any PATH changes)
+claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos"
+```
+
+Optional: add to PATH so you can type `contextos` at the command line:
+
+```sh
+mkdir -p "$HOME/.local/bin"
+ln -s "$HOME/.local/share/contextos/contextos" "$HOME/.local/bin/contextos"
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 ```
 
 ### macOS (Intel)
 
+Same steps as Apple Silicon, using the `osx-x64` download:
+
 ```sh
-curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-x64.tar.gz | tar xz
-sudo mv osx-x64/contextos /usr/local/bin/contextos
-contextos --version
+mkdir -p "$HOME/.local/share/contextos"
+curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-x64.tar.gz \
+  | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
+"$HOME/.local/share/contextos/contextos" --version
+claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos"
 ```
 
 ### Linux x64
 
 ```sh
-curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-linux-x64.tar.gz | tar xz
-sudo mv linux-x64/contextos /usr/local/bin/contextos
-contextos --version
+mkdir -p "$HOME/.local/share/contextos"
+curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-linux-x64.tar.gz \
+  | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
+"$HOME/.local/share/contextos/contextos" --version
+claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos"
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
+# Download and extract to a permanent location (no admin required)
 Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip
-Expand-Archive contextos.zip -DestinationPath .
-# Move win-x64\contextos.exe somewhere on your PATH, e.g.:
-Move-Item win-x64\contextos.exe C:\tools\contextos.exe
-contextos --version
+Expand-Archive contextos.zip -DestinationPath "$env:LOCALAPPDATA\Programs\contextos" -Force
+
+# Verify it runs
+& "$env:LOCALAPPDATA\Programs\contextos\win-x64\contextos.exe" --version
+
+# Register with Claude Code (full path, works without any PATH changes)
+claude mcp add --scope user contextos -- "$env:LOCALAPPDATA\Programs\contextos\win-x64\contextos.exe"
+```
+
+Optional: add to PATH so you can type `contextos` at the command line:
+
+```powershell
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:LOCALAPPDATA\Programs\contextos\win-x64", "User")
+# Restart your PowerShell session for the change to take effect.
 ```
 
 ### .NET tool (requires .NET 10)
@@ -74,18 +110,8 @@ the server will start. See [docs/CONFIG.md](docs/CONFIG.md).
 
 ## Register with Claude Code
 
-Run this once after installing. The `--scope user` flag makes the server
-available in every project, not just the current directory.
-
-```sh
-# macOS / Linux
-claude mcp add --scope user contextos -- /usr/local/bin/contextos
-
-# Windows
-claude mcp add --scope user contextos -- C:\tools\contextos.exe
-```
-
-Verify: `claude mcp list` should show `contextos`. Then open a Claude Code
+The `claude mcp add` commands above already include the full path. Run
+`claude mcp list` to confirm `contextos` appears, then open a Claude Code
 session and run `/mcp` to confirm the three tools appear.
 
 ---
