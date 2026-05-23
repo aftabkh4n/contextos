@@ -1,142 +1,147 @@
 # ContextOS
 
-ContextOS is an MCP server that gives Claude Code and other AI coding agents
-memory that survives across sessions. Store decisions, notes, and gotchas
-once, recall them later, and get a context summary on session start so you
-stop re-explaining your codebase every morning.
+Persistent engineering context for AI coding agents. ContextOS is an MCP
+server that gives Claude Code memory across sessions. Store decisions, notes,
+and gotchas once; the agent already knows them next time you open a project.
 
-Apache 2.0. Built with .NET 10. Works with any MCP-compatible client.
+Apache 2.0. Single binary. No cloud, no auth, no Postgres.
 
 ---
 
-## What works
-
-Three MCP tools are implemented and tested end-to-end with Claude Code:
-
-- **remember** -- store a memory (decision, note, gotcha, or todo) in the
-  local SQLite database for this workspace.
-- **recall** -- search memories by hybrid semantic and keyword search.
-  Returns ranked results using Reciprocal Rank Fusion.
-- **context** -- assemble a markdown summary of the current workspace:
-  branch, recent commits, recent decisions, open todos. Scope can be
-  `current`, `week`, or `all`.
-
 ## How it works
 
-When you open Claude Code (or any MCP-compatible client) in a workspace,
-ContextOS responds to the MCP `initialize` handshake with a context blob
-in `serverInfo.instructions`. The client passes this to the model as a
-system-level instruction before any user message.
+When Claude Code opens a workspace, ContextOS injects a context summary into
+the MCP `initialize` handshake. The agent receives your recent commits, open
+todos, and top decisions before any user message. No tool call required.
 
-The blob contains:
+Three MCP tools are always available:
 
-- Current git branch and the three most recent commits
-- Open todos and memories tagged "active"
-- Top recent decisions ranked by importance and recency
+- **remember** -- store a memory (decision, note, gotcha, or todo).
+- **recall** -- search memories by hybrid semantic and keyword search.
+- **context** -- assemble a full workspace summary on demand.
 
-The agent already knows where you left off. You do not have to ask.
+Storage is local SQLite, one file per workspace under `~/.contextos/`.
 
-If the workspace has no stored memories and is not a git repo, the
-instructions are a short prompt: "ContextOS connected. No memory yet for
-this workspace. Use the remember tool to store decisions, todos, and notes."
+---
 
-## Installation
+## Install
 
-### Download a release binary (no .NET required)
-
-Download the latest release for your platform from the
-[releases page](https://github.com/aftabkh4n/contextos/releases/latest).
+### macOS (Apple Silicon)
 
 ```sh
-# macOS (Apple Silicon)
 curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz | tar xz
-./osx-arm64/contextos --version
+sudo mv osx-arm64/contextos /usr/local/bin/contextos
+contextos --version
 ```
 
+### macOS (Intel)
+
 ```sh
-# Linux
-curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-linux-x64.tar.gz | tar xz
-./linux-x64/contextos --version
+curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-x64.tar.gz | tar xz
+sudo mv osx-x64/contextos /usr/local/bin/contextos
+contextos --version
 ```
+
+### Linux x64
+
+```sh
+curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-linux-x64.tar.gz | tar xz
+sudo mv linux-x64/contextos /usr/local/bin/contextos
+contextos --version
+```
+
+### Windows (PowerShell)
 
 ```powershell
-# Windows (PowerShell)
-Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile "contextos.zip"
-Expand-Archive contextos.zip
-.\contextos\win-x64\contextos.exe --version
+Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip
+Expand-Archive contextos.zip -DestinationPath .
+# Move win-x64\contextos.exe somewhere on your PATH, e.g.:
+Move-Item win-x64\contextos.exe C:\tools\contextos.exe
+contextos --version
 ```
 
+### .NET tool (requires .NET 10)
+
 ```sh
-# Or via .NET tool (if you have .NET 10 installed)
 dotnet tool install -g ContextOS
 ```
 
-### Register with Claude Code
+Note: the .NET tool package does not bundle the ONNX model or native runtime
+libs. You must configure Ollama or OpenAI as the embeddings provider before
+the server will start. See [docs/CONFIG.md](docs/CONFIG.md).
 
-After downloading, register the binary with Claude Code:
+---
+
+## Register with Claude Code
+
+Run this once after installing. The `--scope user` flag makes the server
+available in every project, not just the current directory.
 
 ```sh
 # macOS / Linux
-claude mcp add --scope user contextos -- /path/to/contextos
+claude mcp add --scope user contextos -- /usr/local/bin/contextos
 
 # Windows
-claude mcp add --scope user contextos -- C:\path\to\contextos.exe
+claude mcp add --scope user contextos -- C:\tools\contextos.exe
 ```
 
-See [examples/claude-code-config](examples/claude-code-config/README.md) for
-the full setup guide, verification steps, and common issues.
+Verify: `claude mcp list` should show `contextos`. Then open a Claude Code
+session and run `/mcp` to confirm the three tools appear.
 
-## Development setup
+---
 
-For contributors only. End users should use the release binary above.
+## First five minutes
 
-```sh
-git clone https://github.com/aftabkh4n/contextos
-cd contextos
-bash scripts/fetch-model.sh   # downloads the ONNX embedding model (~22 MB)
-dotnet build
-dotnet test
-```
+After registering, open Claude Code in any git repo with a few commits. Ask:
 
-Register with Claude Code from source:
+> "What was I working on?"
 
-```sh
-claude mcp add --scope user contextos -- dotnet run \
-  --project /path/to/contextos/src/ContextOS.Mcp \
-  --no-build
-```
+The agent will describe the recent commit history and any stored memories
+without calling any tool. That is auto-hydration working.
 
-Replace `/path/to/contextos` with the absolute path where you cloned the repo.
-Use forward slashes even on Windows.
+Then try storing a memory:
 
-### Embeddings model
+> "Use contextos remember to store: We chose SQLite over Postgres to keep
+> the install zero-dependency. Type: decision, importance: 0.8."
 
-Three providers are supported. The default is ONNX (no setup beyond
-downloading the model file). Ollama and OpenAI are also supported for
-teams that prefer them.
+Close Claude Code, reopen it in the same directory, and ask again. The
+decision comes back automatically.
 
-| Provider | Setup | Dimension |
-|----------|-------|-----------|
-| `onnx` (default) | Run `fetch-model.sh` | 384 |
-| `ollama` | `ollama serve` + `ollama pull nomic-embed-text` | 768 |
-| `openai` | `OPENAI_API_KEY` env var or config | 1536 |
+---
 
-Configure via `~/.contextos/config.json`. See [docs/CONFIG.md](docs/CONFIG.md)
-for the full reference.
+## Technical summary
 
-The ONNX model is not checked into git. `fetch-model.sh` writes two files
-into `src/ContextOS.Embeddings/Models/`:
+ContextOS listens on stdio and speaks the MCP protocol. On the `initialize`
+handshake it assembles a context blob (recent commits, top memories by
+importance and recency, open todos) and returns it in `serverInfo.instructions`.
+The client passes this to the model as a system instruction before any user
+message lands.
 
-- `all-MiniLM-L6-v2.onnx`
-- `vocab.txt`
+Search uses a hybrid pipeline: vector cosine similarity over 384-dim embeddings
+(all-MiniLM-L6-v2, runs locally via ONNX Runtime) merged with SQLite FTS5
+full-text search. The two ranked lists are merged via Reciprocal Rank Fusion
+and reranked by recency and stored importance. All of this runs in-process with
+no network calls for the default ONNX provider.
 
-The server will not start without these. Missing files produce:
+State lives in `~/.contextos/{workspace_id}.db`, one SQLite file per workspace.
+The workspace ID is derived from the absolute path of the nearest `.git` directory.
+No data leaves the machine unless you configure the OpenAI embeddings provider.
 
-```
-ContextOS cannot start: no functional embeddings provider.
-The configured provider is: onnx
-...
-```
+---
+
+## Scope
+
+v1 is a local, single-user tool. Out of scope: web UI, auth, Postgres, team
+sync, cloud features, PR ingestion, architecture graphs, memory decay policies.
+See [PROJECT.md](PROJECT.md) for the full spec.
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
 
 ## License
 
