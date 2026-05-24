@@ -17,7 +17,12 @@
     <PackageProjectUrl>https://github.com/aftabkh4n/contextos</PackageProjectUrl>
     <RepositoryUrl>https://github.com/aftabkh4n/contextos</RepositoryUrl>
     <PackageTags>mcp;ai;memory;coding-agent;claude;cursor</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol" Version="1.3.0" />
