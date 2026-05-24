@@ -102,17 +102,21 @@ Optional: add to PATH so you can type `contextos` at the command line:
 dotnet tool install -g ContextOS
 ```
 
-Note: the .NET tool package does not bundle the ONNX model or native runtime
-libs. You must configure Ollama or OpenAI as the embeddings provider before
-the server will start. See [docs/CONFIG.md](docs/CONFIG.md).
+The .NET tool package does not bundle the ONNX model or native runtime libs.
+Configure Ollama or OpenAI as the embeddings provider before starting the
+server. See [docs/CONFIG.md](docs/CONFIG.md) for provider setup, then:
+
+```sh
+claude mcp add --scope user contextos -- contextos
+```
 
 ---
 
-## Register with Claude Code
+## Verify the registration
 
-The `claude mcp add` commands above already include the full path. Run
-`claude mcp list` to confirm `contextos` appears, then open a Claude Code
-session and run `/mcp` to confirm the three tools appear.
+Run `claude mcp list` — `contextos` should appear without a "failed" status.
+Open a Claude Code session and run `/mcp` to confirm all three tools appear:
+`remember`, `recall`, `context`.
 
 ---
 
