@@ -23,8 +23,10 @@ This is the recommended path. No .NET SDK required.
 
    ```powershell
    # Windows
+   $ProgressPreference = 'SilentlyContinue'
    Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip
    Expand-Archive contextos.zip -DestinationPath "$env:LOCALAPPDATA\Programs\contextos" -Force
+   $ProgressPreference = 'Continue'
    ```
 
 2. **Register with Claude Code.**
