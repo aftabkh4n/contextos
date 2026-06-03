@@ -164,11 +164,13 @@ Unlikely with the release binary. File an issue if it occurs.
 ### 1. Download and extract
 
 ```powershell
-# Download
+# Silence the progress bar first -- it throttles Invoke-WebRequest by 10-50x
+$ProgressPreference = 'SilentlyContinue'
 Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip
 
 # Extract to a permanent location under your user profile (no admin required)
 Expand-Archive contextos.zip -DestinationPath "$env:LOCALAPPDATA\Programs\contextos" -Force
+$ProgressPreference = 'Continue'
 ```
 
 The zip extracts a `win-x64\` folder, so the binary ends up at:

@@ -79,8 +79,10 @@ claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos
 
 ```powershell
 # Download and extract to a permanent location (no admin required)
+$ProgressPreference = 'SilentlyContinue'
 Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip
 Expand-Archive contextos.zip -DestinationPath "$env:LOCALAPPDATA\Programs\contextos" -Force
+$ProgressPreference = 'Continue'
 
 # Verify it runs
 & "$env:LOCALAPPDATA\Programs\contextos\win-x64\contextos.exe" --version
