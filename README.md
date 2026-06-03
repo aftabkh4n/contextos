@@ -32,7 +32,13 @@ Storage is local SQLite, one file per workspace under `~/.contextos/`.
 
 ### macOS (Apple Silicon)
 
+These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
+
 ```sh
+# Stop any running instance and remove existing registration (no-ops on a fresh machine)
+pkill -f contextos || true
+claude mcp remove contextos 2>/dev/null || true
+
 # Extract to a permanent location (no sudo required)
 mkdir -p "$HOME/.local/share/contextos"
 curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz \
@@ -57,7 +63,12 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 
 Same steps as Apple Silicon, using the `osx-x64` download:
 
+These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
+
 ```sh
+pkill -f contextos || true
+claude mcp remove contextos 2>/dev/null || true
+
 mkdir -p "$HOME/.local/share/contextos"
 curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-x64.tar.gz \
   | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
@@ -67,7 +78,12 @@ claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos
 
 ### Linux x64
 
+These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
+
 ```sh
+pkill -f contextos || true
+claude mcp remove contextos 2>/dev/null || true
+
 mkdir -p "$HOME/.local/share/contextos"
 curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-linux-x64.tar.gz \
   | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
@@ -77,7 +93,13 @@ claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos
 
 ### Windows (PowerShell)
 
+These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
+
 ```powershell
+# Stop any running ContextOS (released by Claude Code MCP sessions)
+Get-Process -Name contextos -ErrorAction SilentlyContinue | Stop-Process -Force
+claude mcp remove contextos 2>$null
+
 # Download and extract to a permanent location (no admin required)
 $ProgressPreference = 'SilentlyContinue'
 Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip

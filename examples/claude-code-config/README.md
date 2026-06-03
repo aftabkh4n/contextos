@@ -11,10 +11,12 @@ This is the recommended path. No .NET SDK required.
 
 1. **Download and extract the binary** for your platform. See
    [docs/INSTALL.md](../../docs/INSTALL.md) for per-platform instructions.
-   The short version:
+   The short version (these commands are safe to run repeatedly -- if you've installed ContextOS before, this will cleanly upgrade you to the latest version):
 
    ```sh
    # macOS / Linux
+   pkill -f contextos || true
+   claude mcp remove contextos 2>/dev/null || true
    mkdir -p "$HOME/.local/share/contextos"
    curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz \
      | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
@@ -23,6 +25,8 @@ This is the recommended path. No .NET SDK required.
 
    ```powershell
    # Windows
+   Get-Process -Name contextos -ErrorAction SilentlyContinue | Stop-Process -Force
+   claude mcp remove contextos 2>$null
    $ProgressPreference = 'SilentlyContinue'
    Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip
    Expand-Archive contextos.zip -DestinationPath "$env:LOCALAPPDATA\Programs\contextos" -Force

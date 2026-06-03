@@ -11,6 +11,8 @@ see the Install section in [README.md](../README.md).
 
 ## macOS (Apple Silicon)
 
+These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
+
 ### 1. Download and extract
 
 The archive contains the binary, a `.pdb` debug file, and a `Models/`
@@ -18,6 +20,10 @@ directory with the ONNX embedding model. Extract everything to a permanent
 directory; the binary expects `Models/` to be next to it.
 
 ```sh
+# Stop any running instance and remove existing registration (no-ops on a fresh machine)
+pkill -f contextos || true
+claude mcp remove contextos 2>/dev/null || true
+
 mkdir -p "$HOME/.local/share/contextos"
 curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz \
   | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
@@ -90,9 +96,14 @@ If missing, re-extract from the archive.
 
 Same steps as Apple Silicon; only the download URL differs.
 
+These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
+
 ### 1. Download and extract
 
 ```sh
+pkill -f contextos || true
+claude mcp remove contextos 2>/dev/null || true
+
 mkdir -p "$HOME/.local/share/contextos"
 curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-x64.tar.gz \
   | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
@@ -115,9 +126,14 @@ claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos
 
 ## Linux x64
 
+These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
+
 ### 1. Download and extract
 
 ```sh
+pkill -f contextos || true
+claude mcp remove contextos 2>/dev/null || true
+
 mkdir -p "$HOME/.local/share/contextos"
 curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-linux-x64.tar.gz \
   | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
@@ -161,9 +177,15 @@ Unlikely with the release binary. File an issue if it occurs.
 
 ## Windows (x64)
 
+These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
+
 ### 1. Download and extract
 
 ```powershell
+# Stop any running ContextOS (released by Claude Code MCP sessions)
+Get-Process -Name contextos -ErrorAction SilentlyContinue | Stop-Process -Force
+claude mcp remove contextos 2>$null
+
 # Silence the progress bar first -- it throttles Invoke-WebRequest by 10-50x
 $ProgressPreference = 'SilentlyContinue'
 Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip
