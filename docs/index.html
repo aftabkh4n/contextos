@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ContextOS — Persistent engineering memory for AI coding agents</title>
+<title>ContextOS - Persistent engineering memory for AI coding agents</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -575,7 +575,7 @@
 <section class="hero">
   <div class="badge">
     <span class="badge-dot"></span>
-    v0.1.0 — Apache 2.0 — runs locally
+    v0.1.0 - Apache 2.0 - runs locally
   </div>
 
   <h1>Your agent already knows<br><em>what you were working on.</em></h1>
@@ -599,7 +599,7 @@
       <span class="dot dot-red"></span>
       <span class="dot dot-yellow"></span>
       <span class="dot dot-green"></span>
-      <span class="terminal-title">claude — contextos-test</span>
+      <span class="terminal-title">claude - contextos-test</span>
     </div>
     <div class="terminal-body">
       <div><span class="t-prompt">you → </span><span class="t-cmd">What was I working on?</span></div>
@@ -625,17 +625,17 @@
 
   <div class="steps">
     <div class="step">
-      <div class="step-num">01 — Store</div>
+      <div class="step-num">01 - Store</div>
       <h3>Save what matters</h3>
       <p>Tell ContextOS about decisions, gotchas, todos, and notes during your session. It stores them with tags, importance scores, and timestamps.</p>
     </div>
     <div class="step">
-      <div class="step-num">02 — Inject</div>
+      <div class="step-num">02 - Inject</div>
       <h3>Auto-hydration on connect</h3>
       <p>When Claude Code connects, ContextOS assembles the current workspace context and injects it via the MCP initialize handshake. No tool call needed.</p>
     </div>
     <div class="step">
-      <div class="step-num">03 — Recall</div>
+      <div class="step-num">03 - Recall</div>
       <h3>Hybrid search when you need more</h3>
       <p>Use the recall tool for deeper digs. Vector search plus BM25, merged with Reciprocal Rank Fusion and reranked by recency and importance.</p>
     </div>
@@ -741,8 +741,8 @@
     <h3>Known limitations</h3>
     <ul>
       <li>Cursor support not manually verified (MCP protocol is shared so likely works)</li>
-      <li>No team or cloud sync — workspace-local SQLite only</li>
-      <li>No git auto-ingestion — manual remember calls only</li>
+      <li>No team or cloud sync - workspace-local SQLite only</li>
+      <li>No git auto-ingestion - manual remember calls only</li>
       <li>Tested primarily with Claude Code</li>
     </ul>
   </div>
