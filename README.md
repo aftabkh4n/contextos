@@ -36,10 +36,10 @@ curl -fsSL https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.sh
 irm https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.ps1 | iex
 ```
 
-That's it. The script installs ContextOS, registers it with Claude Code, and runs a selftest to confirm everything works.
+The script downloads the right binary for your platform, extracts it, adds it to PATH, registers with Claude Code, and runs a selftest.
 
 <details>
-<summary>Manual install</summary>
+<summary>Manual install (advanced)</summary>
 
 > **v0.1.0 is the first release.** If downloading from "latest" returns a 404,
 > the release has not been published yet. Check the

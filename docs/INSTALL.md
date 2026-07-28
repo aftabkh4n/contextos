@@ -1,7 +1,24 @@
 # ContextOS installation
 
-Detailed per-platform instructions. If you just want the quick version,
-see the Install section in [README.md](../README.md).
+## One-command install
+
+**macOS / Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.ps1 | iex
+```
+
+The script downloads the right binary for your platform, extracts it, adds it to PATH, registers with Claude Code, and runs a selftest. No admin rights required.
+
+---
+
+## Manual install (advanced)
+
+Use the steps below if you prefer to control each step, are installing in a non-standard location, or the one-command installer does not work for your setup.
 
 > **v0.1.0 is the first release.** If downloading from "latest" returns a 404,
 > the release has not been published yet. Check the
