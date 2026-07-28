@@ -26,6 +26,21 @@ Storage is local SQLite, one file per workspace under `~/.contextos/`.
 
 ## Install
 
+**macOS / Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.ps1 | iex
+```
+
+That's it. The script installs ContextOS, registers it with Claude Code, and runs a selftest to confirm everything works.
+
+<details>
+<summary>Manual install</summary>
+
 > **v0.1.0 is the first release.** If downloading from "latest" returns a 404,
 > the release has not been published yet. Check the
 > [Releases tab](https://github.com/aftabkh4n/contextos/releases).
@@ -40,70 +55,55 @@ pkill -f contextos || true
 claude mcp remove contextos 2>/dev/null || true
 
 # Extract to a permanent location (no sudo required)
-mkdir -p "$HOME/.local/share/contextos"
-curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz \
-  | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
+mkdir -p "$HOME/.local/share/contextos/osx-arm64"
+curl -fsSL https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-arm64.tar.gz \
+  | tar xz -C "$HOME/.local/share/contextos"
 
 # Verify
-"$HOME/.local/share/contextos/contextos" --version
+"$HOME/.local/share/contextos/osx-arm64/contextos" --version
 
 # Register with Claude Code (full path, works without any PATH changes)
-claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos"
-```
-
-Optional: add to PATH so you can type `contextos` at the command line:
-
-```sh
-mkdir -p "$HOME/.local/bin"
-ln -s "$HOME/.local/share/contextos/contextos" "$HOME/.local/bin/contextos"
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/osx-arm64/contextos"
 ```
 
 ### macOS (Intel)
 
-Same steps as Apple Silicon, using the `osx-x64` download:
-
-These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
-
 ```sh
 pkill -f contextos || true
 claude mcp remove contextos 2>/dev/null || true
 
-mkdir -p "$HOME/.local/share/contextos"
-curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-x64.tar.gz \
-  | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
-"$HOME/.local/share/contextos/contextos" --version
-claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos"
+mkdir -p "$HOME/.local/share/contextos/osx-x64"
+curl -fsSL https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-osx-x64.tar.gz \
+  | tar xz -C "$HOME/.local/share/contextos"
+"$HOME/.local/share/contextos/osx-x64/contextos" --version
+claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/osx-x64/contextos"
 ```
 
 ### Linux x64
 
-These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
-
 ```sh
 pkill -f contextos || true
 claude mcp remove contextos 2>/dev/null || true
 
-mkdir -p "$HOME/.local/share/contextos"
-curl -L https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-linux-x64.tar.gz \
-  | tar xz --strip-components=1 -C "$HOME/.local/share/contextos"
-"$HOME/.local/share/contextos/contextos" --version
-claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/contextos"
+mkdir -p "$HOME/.local/share/contextos/linux-x64"
+curl -fsSL https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-linux-x64.tar.gz \
+  | tar xz -C "$HOME/.local/share/contextos"
+"$HOME/.local/share/contextos/linux-x64/contextos" --version
+claude mcp add --scope user contextos -- "$HOME/.local/share/contextos/linux-x64/contextos"
 ```
 
 ### Windows (PowerShell)
 
-These commands are safe to run repeatedly. If you've installed ContextOS before, this will cleanly upgrade you to the latest version.
-
 ```powershell
 # Stop any running ContextOS (released by Claude Code MCP sessions)
 Get-Process -Name contextos -ErrorAction SilentlyContinue | Stop-Process -Force
-claude mcp remove contextos 2>$null
+& claude mcp remove contextos
 
 # Download and extract to a permanent location (no admin required)
 $ProgressPreference = 'SilentlyContinue'
-Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" -OutFile contextos.zip
-Expand-Archive contextos.zip -DestinationPath "$env:LOCALAPPDATA\Programs\contextos" -Force
+Invoke-WebRequest -Uri "https://github.com/aftabkh4n/contextos/releases/latest/download/contextos-win-x64.zip" `
+  -OutFile "$env:TEMP\contextos-install.zip"
+Expand-Archive "$env:TEMP\contextos-install.zip" -DestinationPath "$env:LOCALAPPDATA\Programs\contextos" -Force
 $ProgressPreference = 'Continue'
 
 # Verify it runs
@@ -133,6 +133,8 @@ server. See [docs/CONFIG.md](docs/CONFIG.md) for provider setup, then:
 ```sh
 claude mcp add --scope user contextos -- contextos
 ```
+
+</details>
 
 ---
 
