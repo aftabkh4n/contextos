@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write    # required to create GitHub Releases
-      id-token: write    # required for NuGet Trusted Publishing (OIDC)
 
     steps:
       - uses: actions/checkout@v4
@@ -97,8 +96,10 @@ jobs:
             dist/contextos-osx-x64.tar.gz
             dist/nupkg/*.nupkg
 
-      - name: Push to NuGet (Trusted Publishing)
+      - name: Push to NuGet
+        if: ${{ secrets.NUGET_API_KEY != '' }}
         run: |
           dotnet nuget push "dist/nupkg/ContextOS.*.nupkg" \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
