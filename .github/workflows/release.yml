@@ -97,7 +97,6 @@ jobs:
             dist/nupkg/*.nupkg
 
       - name: Push to NuGet
-        if: ${{ secrets.NUGET_API_KEY != '' }}
         run: |
           dotnet nuget push "dist/nupkg/ContextOS.*.nupkg" \
             --api-key ${{ secrets.NUGET_API_KEY }} \
