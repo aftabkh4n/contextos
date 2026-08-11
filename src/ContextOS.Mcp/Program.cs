@@ -245,6 +245,8 @@ static LogEventLevel LoadLogLevel(string configPath)
 
 static void WriteEmbeddingError(string providerName, string detail)
 {
+    string onnxConfig   = """{"embeddings":{"modelsDir":"~/.contextos/models"}}""";
+    string ollamaConfig = """{"embeddings":{"provider":"ollama"}}""";
     Console.Error.WriteLine(
         $"""
         ContextOS cannot start: no functional embeddings provider.
@@ -253,8 +255,21 @@ static void WriteEmbeddingError(string providerName, string detail)
         Detail: {detail}
 
         To fix:
-          - For the default ONNX provider: run `bash scripts/fetch-model.sh`
-            in the ContextOS repo root to download the model.
+          - For the default ONNX provider:
+              The model is not bundled in the .NET tool package. Options:
+              a) Download manually and point to it in config:
+                   mkdir -p ~/.contextos/models
+                   curl -L -o ~/.contextos/models/all-MiniLM-L6-v2.onnx \
+                     https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx
+                   curl -L -o ~/.contextos/models/vocab.txt \
+                     https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/vocab.txt
+                 Then add to ~/.contextos/config.json:
+                   {onnxConfig}
+              b) Switch to Ollama: ollama pull nomic-embed-text
+                 Then add to ~/.contextos/config.json:
+                   {ollamaConfig}
+              c) Use the platform binary (includes the model):
+                 https://github.com/aftabkh4n/contextos/releases/latest
           - For Ollama: ensure Ollama is running at the configured URL and
             the model is pulled. Default: http://localhost:11434
           - For OpenAI: set OPENAI_API_KEY in your environment or

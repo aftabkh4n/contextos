@@ -9,5 +9,6 @@ public record EmbeddingsConfig(
     string OllamaUrl = "http://localhost:11434",
     string OllamaModel = "nomic-embed-text",
     string OpenAiModel = "text-embedding-3-small",
-    string? OpenAiApiKey = null
+    string? OpenAiApiKey = null,
+    string? ModelsDir = null
 );

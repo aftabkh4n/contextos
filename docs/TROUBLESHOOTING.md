@@ -13,8 +13,40 @@ The server process crashed or exited during startup. Check the log file:
 Common causes:
 
 **ONNX model missing (dotnet tool installs only)**
-The .NET tool package does not bundle the model. Configure Ollama or OpenAI
-as the provider. See [INSTALL.md](INSTALL.md) for provider setup.
+The .NET tool package does not bundle the ONNX model. The server will not
+start until you choose one of the options below.
+
+Option 1: Download the model manually and point config at it.
+
+```sh
+mkdir -p ~/.contextos/models
+curl -L -o ~/.contextos/models/all-MiniLM-L6-v2.onnx \
+  https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx
+curl -L -o ~/.contextos/models/vocab.txt \
+  https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/vocab.txt
+```
+
+Then add to `~/.contextos/config.json`:
+
+```json
+{"embeddings":{"modelsDir":"~/.contextos/models"}}
+```
+
+Option 2: Use Ollama (no model download needed).
+
+```sh
+ollama pull nomic-embed-text
+```
+
+Then add to `~/.contextos/config.json`:
+
+```json
+{"embeddings":{"provider":"ollama"}}
+```
+
+Option 3: Use the platform binary from the releases page (it includes the
+model, so no extra setup is needed).
+https://github.com/aftabkh4n/contextos/releases/latest
 
 **DllNotFoundException for git2-* (dotnet tool installs only)**
 The .NET tool package does not bundle LibGit2Sharp's native binaries. Git
