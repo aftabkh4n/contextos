@@ -38,11 +38,23 @@ irm https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.ps1 | iex
 
 The script downloads the right binary for your platform, extracts it, adds it to PATH, registers with Claude Code, and runs a selftest.
 
+**Or via .NET tool** (requires .NET 10 SDK):
+```sh
+dotnet tool install -g ContextOS
+```
+
+> The .NET tool path does not include the ONNX model. Run `contextos --selftest` after install. If it reports a missing model, see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for the three options to fix it.
+
+After installing, register with Claude Code:
+```sh
+claude mcp add --scope user contextos -- contextos
+```
+
 <details>
 <summary>Manual install (advanced)</summary>
 
-> **v0.1.0 is the first release.** If downloading from "latest" returns a 404,
-> the release has not been published yet. Check the
+> If downloading from "latest" returns a 404, the release has not been
+> published yet. Check the
 > [Releases tab](https://github.com/aftabkh4n/contextos/releases).
 
 ### macOS (Apple Silicon)
@@ -120,15 +132,17 @@ Optional: add to PATH so you can type `contextos` at the command line:
 # Restart your PowerShell session for the change to take effect.
 ```
 
-### .NET tool (requires .NET 10)
+### .NET tool (requires .NET 10 SDK)
 
 ```sh
 dotnet tool install -g ContextOS
 ```
 
-The .NET tool package does not bundle the ONNX model or native runtime libs.
-Configure Ollama or OpenAI as the embeddings provider before starting the
-server. See [docs/CONFIG.md](docs/CONFIG.md) for provider setup, then:
+> The .NET tool path does not include the ONNX model. Run `contextos --selftest`
+> after install. If it reports a missing model, see
+> [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for the three options to fix it.
+
+After installing, register with Claude Code:
 
 ```sh
 claude mcp add --scope user contextos -- contextos

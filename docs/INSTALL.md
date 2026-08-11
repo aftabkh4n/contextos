@@ -20,8 +20,8 @@ The script downloads the right binary for your platform, extracts it, adds it to
 
 Use the steps below if you prefer to control each step, are installing in a non-standard location, or the one-command installer does not work for your setup.
 
-> **v0.1.0 is the first release.** If downloading from "latest" returns a 404,
-> the release has not been published yet. Check the
+> If downloading from "latest" returns a 404, the release has not been
+> published yet. Check the
 > [Releases tab](https://github.com/aftabkh4n/contextos/releases).
 
 ---
