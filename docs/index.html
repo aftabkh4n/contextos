@@ -575,7 +575,7 @@
 <section class="hero">
   <div class="badge">
     <span class="badge-dot"></span>
-    v0.1.0 - Apache 2.0 - runs locally
+    v0.1.4 - Apache 2.0 - runs locally
   </div>
 
   <h1>Your agent already knows<br><em>what you were working on.</em></h1>
@@ -701,6 +701,7 @@
       <div class="platform-tabs">
         <button class="tab active" onclick="showTab('mac')">macOS / Linux</button>
         <button class="tab" onclick="showTab('win')">Windows</button>
+        <button class="tab" onclick="showTab('dotnet')">.NET tool</button>
       </div>
 
       <div id="tab-mac">
@@ -715,6 +716,18 @@
           <code>irm https://raw.githubusercontent.com/<br>aftabkh4n/contextos/main/install.ps1 | iex</code>
           <button class="copy-btn" onclick="copyCode('win')">copy</button>
         </div>
+      </div>
+
+      <div id="tab-dotnet" style="display:none">
+        <div class="code-block">
+          <code>dotnet tool install -g ContextOS</code>
+          <button class="copy-btn" onclick="copyCode('dotnet')">copy</button>
+        </div>
+        <p style="margin-top: 0.75rem; font-size: 12px; color: var(--text-dim); line-height: 1.5;">
+          Requires .NET 10 SDK. ONNX model not included —
+          <a href="https://github.com/aftabkh4n/contextos/blob/main/docs/TROUBLESHOOTING.md" style="color: var(--text-muted);">see troubleshooting</a>
+          if selftest fails.
+        </p>
       </div>
 
       <p style="margin-top: 1rem; font-size: 13px; color: var(--text-dim);">
@@ -734,7 +747,7 @@
 </div>
 
 <section class="section" style="text-align: center;">
-  <div class="section-label">Honest about v0.1.0</div>
+  <div class="section-label">Honest about v0.1.4</div>
   <h2 style="margin-bottom: 2rem;">What it isn't yet.</h2>
 
   <div class="honest">
@@ -758,7 +771,7 @@
 </section>
 
 <footer>
-  <div class="footer-logo">Context<span>OS</span> v0.1.0</div>
+  <div class="footer-logo">Context<span>OS</span> v0.1.4</div>
   <ul class="footer-links">
     <li><a href="https://github.com/aftabkh4n/contextos">GitHub</a></li>
     <li><a href="https://github.com/aftabkh4n/contextos/releases">Releases</a></li>
@@ -770,21 +783,23 @@
 
 <script>
 function showTab(platform) {
-  document.getElementById('tab-mac').style.display = platform === 'mac' ? 'block' : 'none';
-  document.getElementById('tab-win').style.display = platform === 'win' ? 'block' : 'none';
+  ['mac', 'win', 'dotnet'].forEach(p => {
+    document.getElementById('tab-' + p).style.display = p === platform ? 'block' : 'none';
+  });
   document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', (platform === 'mac' && i === 0) || (platform === 'win' && i === 1));
+    t.classList.toggle('active', ['mac', 'win', 'dotnet'][i] === platform);
   });
 }
 
 function copyCode(platform) {
   const cmds = {
     mac: 'curl -fsSL https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.sh | bash',
-    win: 'irm https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.ps1 | iex'
+    win: 'irm https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.ps1 | iex',
+    dotnet: 'dotnet tool install -g ContextOS'
   };
   navigator.clipboard.writeText(cmds[platform]).then(() => {
     const btns = document.querySelectorAll('.copy-btn');
-    const idx = platform === 'mac' ? 0 : 1;
+    const idx = ['mac', 'win', 'dotnet'].indexOf(platform);
     btns[idx].textContent = 'copied!';
     setTimeout(() => btns[idx].textContent = 'copy', 1500);
   });

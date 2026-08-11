@@ -1,6 +1,6 @@
 # ContextOS with Cursor
 
-Cursor support is not yet manually verified for v0.1.0. The MCP protocol is
+Cursor support is not yet manually verified for v0.1.4. The MCP protocol is
 shared so it likely works, but we have not confirmed the auto-hydration UX in
 Cursor. Try it and open an issue with results.
 
