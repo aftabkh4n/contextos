@@ -87,7 +87,18 @@ if (command == CliCommand.Selftest)
 Log.Information("ContextOS starting (version {Version})", CliPrinter.GetVersion());
 
 string cwd = Directory.GetCurrentDirectory();
-string workspaceRoot = LibGit2SharpProbe.DiscoverRoot(cwd) ?? cwd;
+string workspaceRoot;
+bool gitNativeAvailable = true;
+try
+{
+    workspaceRoot = LibGit2SharpProbe.DiscoverRoot(cwd) ?? cwd;
+}
+catch (Exception ex) when (ex is TypeInitializationException or DllNotFoundException)
+{
+    Log.Warning(ex, "Git integration unavailable: native library not found. Install via release binary for full git support.");
+    gitNativeAvailable = false;
+    workspaceRoot = cwd;
+}
 string workspaceId = ComputeWorkspaceId(workspaceRoot);
 string workspaceName = Path.GetFileName(workspaceRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                        ?? workspaceId;
@@ -133,10 +144,28 @@ catch (Exception ex)
     return 1;
 }
 
-var gitProbe = new LibGit2SharpProbe(NullLogger<LibGit2SharpProbe>.Instance);
-GitInfo? gitInfo = gitProbe.Probe(workspaceRoot);
-if (gitInfo is not null)
-    Log.Information("Git: branch={Branch} commits={CommitCount}", gitInfo.Branch, gitInfo.RecentCommits.Count);
+IGitProbe gitProbeService;
+GitInfo? gitInfo = null;
+if (gitNativeAvailable)
+{
+    try
+    {
+        var probe = new LibGit2SharpProbe(NullLogger<LibGit2SharpProbe>.Instance);
+        gitInfo = probe.Probe(workspaceRoot);
+        gitProbeService = probe;
+        if (gitInfo is not null)
+            Log.Information("Git: branch={Branch} commits={CommitCount}", gitInfo.Branch, gitInfo.RecentCommits.Count);
+    }
+    catch (Exception ex) when (ex is TypeInitializationException or DllNotFoundException)
+    {
+        Log.Warning(ex, "Git integration unavailable: native library not found. Install via release binary for full git support.");
+        gitProbeService = new NoOpGitProbe();
+    }
+}
+else
+{
+    gitProbeService = new NoOpGitProbe();
+}
 
 SqliteStore store = await SqliteStore.OpenAsync(dbPath, embeddings);
 
@@ -164,7 +193,7 @@ builder.Logging.AddSerilog(Log.Logger, dispose: false);  // Log.Logger disposed 
 builder.Services.AddSingleton<WorkspaceContext>(workspaceCtx);
 builder.Services.AddSingleton<IMemoryStore>(store);
 builder.Services.AddSingleton<ISearch>(search);
-builder.Services.AddSingleton<IGitProbe, LibGit2SharpProbe>();
+builder.Services.AddSingleton<IGitProbe>(gitProbeService);
 
 builder.Services.AddMcpServer(options =>
     {
