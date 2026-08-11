@@ -171,6 +171,21 @@ public sealed class GitProbeTests : IDisposable
     }
 
     // -------------------------------------------------------------------------
+    // NoOpGitProbe
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void NoOpGitProbe_Probe_AlwaysReturnsNull()
+    {
+        string dir = CreateTempDir();
+        var probe = new NoOpGitProbe();
+
+        GitInfo? info = probe.Probe(dir);
+
+        Assert.Null(info);
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 

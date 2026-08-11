@@ -16,6 +16,13 @@ Common causes:
 The .NET tool package does not bundle the model. Configure Ollama or OpenAI
 as the provider. See [INSTALL.md](INSTALL.md) for provider setup.
 
+**DllNotFoundException for git2-* (dotnet tool installs only)**
+The .NET tool package does not bundle LibGit2Sharp's native binaries. Git
+context (branch, recent commits, uncommitted files) will be unavailable, but
+the server starts and remember/recall/context still work. To get full git
+support, use the platform binary from the releases page instead of the dotnet
+tool.
+
 **Binary not executable (macOS / Linux)**
 ```sh
 chmod +x /usr/local/bin/contextos
