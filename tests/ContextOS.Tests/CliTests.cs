@@ -63,8 +63,7 @@ public sealed class CliTests
 
         string stdout = await proc.StandardOutput.ReadToEndAsync();
         Assert.Equal(0, proc.ExitCode);
-        Assert.Contains("0.1.0", stdout);
-        Assert.Contains("ContextOS", stdout, StringComparison.OrdinalIgnoreCase);
+        Assert.Matches(@"ContextOS \d+\.\d+\.\d+", stdout);
     }
 
     [Trait("Category", "Integration")]
