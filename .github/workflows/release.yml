@@ -96,9 +96,19 @@ jobs:
             dist/contextos-osx-x64.tar.gz
             dist/nupkg/*.nupkg
 
+      - name: List nupkg artifacts
+        run: ls -la dist/nupkg/
+
       - name: Push to NuGet
         run: |
-          dotnet nuget push "dist/nupkg/ContextOS.*.nupkg" \
+          NUPKG=$(ls dist/nupkg/*.nupkg | head -1)
+          echo "Pushing: $NUPKG"
+          if [ -z "$NUPKG" ]; then
+            echo "ERROR: No .nupkg file found in dist/nupkg/"
+            ls -la dist/nupkg/
+            exit 1
+          fi
+          dotnet nuget push "$NUPKG" \
             --api-key ${{ secrets.NUGET_API_KEY }} \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
