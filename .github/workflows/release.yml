@@ -65,9 +65,6 @@ jobs:
           done
           ls -lh dist/*.zip dist/*.tar.gz
 
-      - name: Pack .NET tool
-        run: dotnet pack src/ContextOS.Mcp -c Release -o dist/nupkg
-
       - name: Determine release tag
         id: tag
         run: |
@@ -76,6 +73,16 @@ jobs:
           else
             echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Pack .NET tool
+        run: |
+          VERSION="${{ steps.tag.outputs.value }}"
+          VERSION="${VERSION#v}"
+          echo "Packing version: $VERSION"
+          dotnet pack src/ContextOS.Mcp -c Release -o dist/nupkg \
+            -p:Version=$VERSION \
+            -p:AssemblyVersion=$VERSION \
+            -p:FileVersion=$VERSION
 
       - name: Delete existing release for this tag (if any)
         env:
