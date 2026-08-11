@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.3 -- 2026-08-11
+
+### Fixes
+- Git integration now fails gracefully when LibGit2Sharp's native library is
+  missing (dotnet tool install path). The server starts normally; remember,
+  recall, and context work without git context.
+- NuGet push in CI now derives the package version from the git tag instead
+  of the hardcoded value in Directory.Build.props.
+- Error message when ONNX model is missing now explains the three remediation
+  options instead of pointing to a repo-local script.
+
+### Known limitation
+The dotnet tool package does not bundle the ONNX model or LibGit2Sharp's
+native binaries. Platform binaries from the releases page include both and
+require no extra setup.
+
+---
+
 ## v0.1.0 -- 2026-05-22
 
 First public release.

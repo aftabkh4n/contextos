@@ -37,7 +37,7 @@ public static class EmbeddingsFactory
         {
             "ollama" => CreateOllamaProvider(cfg),
             "openai" => CreateOpenAiProvider(cfg),
-            _        => OnnxMiniLmProvider.Create(modelsDir),
+            _        => OnnxMiniLmProvider.Create(modelsDir ?? cfg.ModelsDir),
         };
 
     /// <summary>

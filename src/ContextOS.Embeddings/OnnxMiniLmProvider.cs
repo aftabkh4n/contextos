@@ -75,7 +75,26 @@ public sealed class OnnxMiniLmProvider : IEmbeddingsProvider, IDisposable
             throw new FileNotFoundException(
                 $"ONNX model files (all-MiniLM-L6-v2.onnx + vocab.txt) not found in any of:{Environment.NewLine}" +
                 $"{checkedList}{Environment.NewLine}" +
-                "Download them by running: bash scripts/fetch-model.sh");
+                $"{Environment.NewLine}" +
+                $"The ONNX model is not bundled in the .NET tool package.{Environment.NewLine}" +
+                $"{Environment.NewLine}" +
+                $"Options:{Environment.NewLine}" +
+                $"  1. Download the model manually:{Environment.NewLine}" +
+                $"       mkdir -p ~/.contextos/models{Environment.NewLine}" +
+                $"       curl -L -o ~/.contextos/models/all-MiniLM-L6-v2.onnx \\{Environment.NewLine}" +
+                $"         https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx{Environment.NewLine}" +
+                $"       curl -L -o ~/.contextos/models/vocab.txt \\{Environment.NewLine}" +
+                $"         https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/vocab.txt{Environment.NewLine}" +
+                $"     Then add to ~/.contextos/config.json:{Environment.NewLine}" +
+                $"       {{\"embeddings\":{{\"modelsDir\":\"~/.contextos/models\"}}}}{Environment.NewLine}" +
+                $"{Environment.NewLine}" +
+                $"  2. Use Ollama instead (no model download needed):{Environment.NewLine}" +
+                $"       Install Ollama, then: ollama pull nomic-embed-text{Environment.NewLine}" +
+                $"     Then add to ~/.contextos/config.json:{Environment.NewLine}" +
+                $"       {{\"embeddings\":{{\"provider\":\"ollama\"}}}}{Environment.NewLine}" +
+                $"{Environment.NewLine}" +
+                $"  3. Use the platform binary (includes the model):{Environment.NewLine}" +
+                $"       https://github.com/aftabkh4n/contextos/releases/latest");
         }
 
         string modelPath = Path.Combine(resolvedDir, "all-MiniLM-L6-v2.onnx");
