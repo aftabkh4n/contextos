@@ -37,4 +37,10 @@ public interface IMemoryStore
         string sessionId,
         string contextHash,
         CancellationToken ct = default);
+
+    /// <summary>Returns all non-archived memories across the store, regardless of workspace.</summary>
+    Task<IReadOnlyList<Memory>> ListAllActiveMemoriesAsync(CancellationToken ct = default);
+
+    /// <summary>Sets <c>archived_at</c> to now for each memory ID in <paramref name="ids"/>.</summary>
+    Task ArchiveManyAsync(IReadOnlyList<string> ids, CancellationToken ct = default);
 }

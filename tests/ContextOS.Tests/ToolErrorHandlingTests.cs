@@ -138,6 +138,12 @@ public sealed class ToolErrorHandlingTests
         public Task LogHydrationAsync(string workspaceId, string sessionId,
             string contextHash, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task<IReadOnlyList<Memory>> ListAllActiveMemoriesAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Memory>>(Array.Empty<Memory>());
+
+        public Task ArchiveManyAsync(IReadOnlyList<string> ids, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 
     private sealed class ThrowingSearch : ISearch

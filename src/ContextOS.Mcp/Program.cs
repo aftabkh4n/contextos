@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -16,6 +17,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Serilog;
 using Serilog.Events;
+using Serilog.Extensions.Logging;
 
 // -------------------------------------------------------------------------
 // Serilog: initialise as early as possible so all code below can log.
@@ -173,6 +175,15 @@ var workspace = new Workspace(workspaceId, workspaceRoot, workspaceName, null,
     DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 await store.UpsertWorkspaceAsync(workspace);
 
+MemoryConfig memoryCfg = LoadMemoryConfig(Path.Combine(contextosHome, "config.json"));
+using (var decayLoggerFactory = LoggerFactory.Create(b => b.AddSerilog(Log.Logger, dispose: false)))
+{
+    var decayLogger = decayLoggerFactory.CreateLogger("ContextOS.Decay");
+    var decayService = new DecayService(memoryCfg);
+    await decayService.RunDecayPassAsync(store, decayLogger);
+    Log.Information("Decay pass complete");
+}
+
 var search = new HybridSearch(store.Connection, embeddings);
 var workspaceCtx = new WorkspaceContext(workspaceId, workspaceRoot, gitInfo);
 
@@ -281,3 +292,17 @@ static void WriteEmbeddingError(string providerName, string detail)
 
 static string ComputeWorkspaceId(string path) =>
     Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(path)))[..16].ToLowerInvariant();
+
+static MemoryConfig LoadMemoryConfig(string configPath)
+{
+    if (!File.Exists(configPath)) return new MemoryConfig();
+    try
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(configPath));
+        if (!doc.RootElement.TryGetProperty("memory", out JsonElement el))
+            return new MemoryConfig();
+        return JsonSerializer.Deserialize<MemoryConfig>(el.GetRawText(), new JsonSerializerOptions(JsonSerializerDefaults.Web))
+               ?? new MemoryConfig();
+    }
+    catch { return new MemoryConfig(); }
+}
