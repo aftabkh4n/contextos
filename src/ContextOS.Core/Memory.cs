@@ -10,5 +10,7 @@ public record Memory(
     string? Tags,
     double Importance,
     long CreatedAt,
-    long? ArchivedAt
+    long? ArchivedAt,
+    DateTimeOffset? LastRecalledAt = null,
+    int DecayDays = 90
 );

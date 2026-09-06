@@ -64,6 +64,8 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         // still receive the embedding BLOB migration.
         if (version < 3)
             await ApplyAsync(Migrations.V2, 3, ct);
+        if (version < 4)
+            await ApplyAsync(Migrations.V3, 4, ct);
     }
 
     private async Task<int> UserVersionAsync(CancellationToken ct)
@@ -148,7 +150,8 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
     {
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = """
-            SELECT id, workspace_id, type, content, source, tags, importance, created_at, archived_at
+            SELECT id, workspace_id, type, content, source, tags, importance, created_at, archived_at,
+                   last_recalled_at, decay_days
             FROM memories WHERE id = @id
             """;
         cmd.Parameters.AddWithValue("@id", id);
@@ -167,7 +170,8 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
 
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = """
-            SELECT id, workspace_id, type, content, source, tags, importance, created_at, archived_at
+            SELECT id, workspace_id, type, content, source, tags, importance, created_at, archived_at,
+                   last_recalled_at, decay_days
             FROM memories
             WHERE workspace_id = @workspaceId
               AND (@type IS NULL OR type = @type)
@@ -184,7 +188,55 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         var rows = new List<Memory>();
         while (await reader.ReadAsync(ct))
             rows.Add(ReadMemory(reader));
+
+        await TouchLastRecalledAtAsync(rows, ct);
         return rows;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Memory>> ListAllActiveMemoriesAsync(CancellationToken ct = default)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT id, workspace_id, type, content, source, tags, importance, created_at, archived_at,
+                   last_recalled_at, decay_days
+            FROM memories
+            WHERE archived_at IS NULL
+            """;
+
+        using SqliteDataReader reader = await cmd.ExecuteReaderAsync(ct);
+        var rows = new List<Memory>();
+        while (await reader.ReadAsync(ct))
+            rows.Add(ReadMemory(reader));
+        return rows;
+    }
+
+    /// <inheritdoc/>
+    public async Task ArchiveManyAsync(IReadOnlyList<string> ids, CancellationToken ct = default)
+    {
+        if (ids.Count == 0) return;
+
+        string placeholders = string.Join(", ", ids.Select((_, i) => $"@id{i}"));
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = $"UPDATE memories SET archived_at = @now WHERE id IN ({placeholders})";
+        cmd.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        for (int i = 0; i < ids.Count; i++)
+            cmd.Parameters.AddWithValue($"@id{i}", ids[i]);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    private async Task TouchLastRecalledAtAsync(IReadOnlyList<Memory> rows, CancellationToken ct)
+    {
+        if (rows.Count == 0) return;
+
+        string now = DateTimeOffset.UtcNow.ToString("O");
+        string placeholders = string.Join(", ", rows.Select((_, i) => $"@id{i}"));
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = $"UPDATE memories SET last_recalled_at = @now WHERE id IN ({placeholders})";
+        cmd.Parameters.AddWithValue("@now", now);
+        for (int i = 0; i < rows.Count; i++)
+            cmd.Parameters.AddWithValue($"@id{i}", rows[i].Id);
+        await cmd.ExecuteNonQueryAsync(ct);
     }
 
     /// <summary>Deletes the memory with <paramref name="id"/>. Returns true if a row was removed.</summary>
@@ -313,7 +365,9 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
             r.IsDBNull(5) ? null : r.GetString(5),
             r.GetDouble(6),
             r.GetInt64(7),
-            r.IsDBNull(8) ? null : r.GetInt64(8));
+            r.IsDBNull(8) ? null : r.GetInt64(8),
+            r.IsDBNull(9) ? null : DateTimeOffset.Parse(r.GetString(9), null, System.Globalization.DateTimeStyles.RoundtripKind),
+            r.GetInt32(10));
 
     private async Task RunAsync(string sql, CancellationToken ct)
     {

@@ -86,4 +86,11 @@ internal static class Migrations
     [
         "ALTER TABLE memories ADD COLUMN embedding BLOB",
     ];
+
+    // Version 4: decay tracking columns.
+    internal static readonly string[] V3 =
+    [
+        "ALTER TABLE memories ADD COLUMN last_recalled_at TEXT",
+        "ALTER TABLE memories ADD COLUMN decay_days INTEGER NOT NULL DEFAULT 90",
+    ];
 }
