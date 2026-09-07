@@ -7,4 +7,5 @@ public static class MemoryTypes
     public const string Decision = "decision";
     public const string Gotcha = "gotcha";
     public const string Todo = "todo";
+    public const string Skill = "skill";
 }

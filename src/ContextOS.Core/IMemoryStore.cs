@@ -11,6 +11,7 @@ public interface IMemoryStore
         string? source = null,
         string? tags = null,
         double importance = 0.5,
+        int decayDays = 90,
         CancellationToken ct = default);
 
     /// <summary>Returns the memory with <paramref name="id"/>, or null if not found.</summary>
