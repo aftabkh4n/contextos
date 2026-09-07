@@ -21,6 +21,7 @@ public static class ContextBuilder
     /// <param name="gitInfo">Git state snapshot captured at startup, or null if not a git repo.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <param name="maxBytes">Maximum size of the returned string in UTF-8 bytes. Defaults to 2048.</param>
+    /// <param name="maxSkills">Maximum number of skills to include in the current-scope view. Defaults to 5.</param>
     /// <returns>Markdown string, always at or under <paramref name="maxBytes"/> bytes.</returns>
     /// <exception cref="ArgumentException">Thrown for an unrecognised scope value.</exception>
     public static async Task<string> BuildAsync(
@@ -30,7 +31,8 @@ public static class ContextBuilder
         string scope = "current",
         GitInfo? gitInfo = null,
         CancellationToken ct = default,
-        int maxBytes = DefaultMaxBytes)
+        int maxBytes = DefaultMaxBytes,
+        int maxSkills = 5)
     {
         string normalScope = scope.ToLowerInvariant();
         if (normalScope is not ("current" or "week" or "all"))
@@ -44,7 +46,7 @@ public static class ContextBuilder
         {
             "week" => BuildWeek(workspaceName, all, nowMs, maxBytes),
             "all"  => BuildAll(workspaceName, all, nowMs, maxBytes),
-            _      => BuildCurrent(workspaceName, all, nowMs, gitInfo, maxBytes),
+            _      => BuildCurrent(workspaceName, all, nowMs, gitInfo, maxBytes, maxSkills),
         };
     }
 
@@ -53,12 +55,20 @@ public static class ContextBuilder
     // -------------------------------------------------------------------------
 
     private static string BuildCurrent(
-        string workspaceName, IReadOnlyList<Memory> all, long nowMs, GitInfo? gitInfo, int maxBytes)
+        string workspaceName, IReadOnlyList<Memory> all, long nowMs, GitInfo? gitInfo, int maxBytes,
+        int maxSkills = 5)
     {
         List<Memory> activeTasks = all
             .Where(m => m.Type == MemoryTypes.Todo || HasTag(m.Tags, "active"))
             .OrderByDescending(m => m.CreatedAt)
             .Take(10)
+            .ToList();
+
+        List<Memory> skills = all
+            .Where(m => m.Type == MemoryTypes.Skill)
+            .OrderByDescending(m => m.Importance)
+            .ThenByDescending(m => m.CreatedAt)
+            .Take(maxSkills)
             .ToList();
 
         List<Memory> decisions = all
@@ -67,7 +77,7 @@ public static class ContextBuilder
             .Take(3)
             .ToList();
 
-        return TruncateCurrent(workspaceName, activeTasks, decisions, nowMs, gitInfo, maxBytes);
+        return TruncateCurrent(workspaceName, activeTasks, skills, decisions, nowMs, gitInfo, maxBytes);
     }
 
     private static string BuildWeek(string workspaceName, IReadOnlyList<Memory> all, long nowMs, int maxBytes)
@@ -99,7 +109,8 @@ public static class ContextBuilder
     // -------------------------------------------------------------------------
 
     private static string FormatCurrent(
-        string workspaceName, List<Memory> activeTasks, List<Memory> decisions, long nowMs, GitInfo? gitInfo)
+        string workspaceName, List<Memory> activeTasks, List<Memory> skills, List<Memory> decisions,
+        long nowMs, GitInfo? gitInfo)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"# ContextOS workspace: {workspaceName}");
@@ -144,6 +155,21 @@ public static class ContextBuilder
                 string label = m.Type == MemoryTypes.Todo ? "todo" : "active";
                 sb.AppendLine($"- [{label}] {m.Content} (created {FormatAge(m.CreatedAt, nowMs)})");
             }
+
+        sb.AppendLine();
+        sb.AppendLine("## Skills");
+        if (skills.Count == 0)
+            sb.AppendLine("None recorded.");
+        else
+            foreach (Memory m in skills)
+            {
+                string skillName = ExtractSkillName(m.Content);
+                string outcome = ExtractOutcome(m.Content);
+                string summary = outcome.Length > 60 ? outcome[..60] : outcome;
+                string tagsNote = m.Tags is not null ? $" (tags: {m.Tags})" : "";
+                sb.AppendLine($"- {skillName} -- {summary}{tagsNote}");
+            }
+
         sb.AppendLine();
         sb.AppendLine("## Recent decisions");
         if (decisions.Count == 0)
@@ -174,24 +200,26 @@ public static class ContextBuilder
     // -------------------------------------------------------------------------
 
     private static string TruncateCurrent(
-        string workspaceName, List<Memory> activeTasks, List<Memory> decisions, long nowMs, GitInfo? gitInfo, int maxBytes)
+        string workspaceName, List<Memory> activeTasks, List<Memory> skills, List<Memory> decisions,
+        long nowMs, GitInfo? gitInfo, int maxBytes)
     {
         int noteBytes = Encoding.UTF8.GetByteCount(TruncationNote);
         var tasks = new List<Memory>(activeTasks);
+        var sks = new List<Memory>(skills);
         var decs = new List<Memory>(decisions);
         bool truncated = false;
 
         while (true)
         {
-            string md = FormatCurrent(workspaceName, tasks, decs, nowMs, gitInfo);
+            string md = FormatCurrent(workspaceName, tasks, sks, decs, nowMs, gitInfo);
             int mdBytes = Encoding.UTF8.GetByteCount(md);
 
             if (!truncated && mdBytes <= maxBytes) return md;
             if (truncated && mdBytes + noteBytes <= maxBytes) return md + TruncationNote;
 
-            // Drop oldest decision first (last in the list, since sorted by recency DESC),
-            // then oldest active task.
+            // Drop oldest decision, then lowest-priority skill, then oldest active task.
             if (decs.Count > 0) { decs.RemoveAt(decs.Count - 1); truncated = true; continue; }
+            if (sks.Count > 0) { sks.RemoveAt(sks.Count - 1); truncated = true; continue; }
             if (tasks.Count > 0) { tasks.RemoveAt(tasks.Count - 1); truncated = true; continue; }
 
             return HardTruncate(md, maxBytes);
@@ -232,6 +260,26 @@ public static class ContextBuilder
     // -------------------------------------------------------------------------
     // Utilities
     // -------------------------------------------------------------------------
+
+    /// <summary>Extracts the skill name from the first line of a skill content block.</summary>
+    internal static string ExtractSkillName(string content)
+    {
+        ReadOnlySpan<char> span = content.AsSpan();
+        const string prefix = "Skill: ";
+        if (!span.StartsWith(prefix)) return content.Length > 60 ? content[..60] : content;
+        int newline = content.IndexOf('\n');
+        int end = newline < 0 ? content.Length : newline;
+        return content[prefix.Length..end].Trim();
+    }
+
+    /// <summary>Extracts the outcome text from a skill content block.</summary>
+    internal static string ExtractOutcome(string content)
+    {
+        const string marker = "\nOutcome: ";
+        int idx = content.IndexOf(marker, StringComparison.Ordinal);
+        if (idx < 0) return string.Empty;
+        return content[(idx + marker.Length)..].Trim();
+    }
 
     private static bool HasTag(string? tags, string target) =>
         tags is not null &&

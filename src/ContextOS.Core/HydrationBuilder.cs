@@ -50,7 +50,7 @@ public static class HydrationBuilder
 
         string context = await ContextBuilder.BuildAsync(
             store, workspaceId, workspaceName,
-            scope: "current", gitInfo: gitInfo, ct: ct, maxBytes: contextBudget);
+            scope: "current", gitInfo: gitInfo, ct: ct, maxBytes: contextBudget, maxSkills: 3);
 
         return Framing + context;
     }

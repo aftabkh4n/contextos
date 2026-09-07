@@ -116,6 +116,7 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         string? source = null,
         string? tags = null,
         double importance = 0.5,
+        int decayDays = 90,
         CancellationToken ct = default)
     {
         string id = UlidHelper.NewUlid();
@@ -128,8 +129,8 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
 
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO memories (id, workspace_id, type, content, source, tags, importance, created_at, embedding)
-            VALUES (@id, @workspaceId, @type, @content, @source, @tags, @importance, @createdAt, @embedding)
+            INSERT INTO memories (id, workspace_id, type, content, source, tags, importance, created_at, embedding, decay_days)
+            VALUES (@id, @workspaceId, @type, @content, @source, @tags, @importance, @createdAt, @embedding, @decayDays)
             """;
         cmd.Parameters.AddWithValue("@id", id);
         cmd.Parameters.AddWithValue("@workspaceId", workspaceId);
@@ -140,9 +141,11 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         cmd.Parameters.AddWithValue("@importance", importance);
         cmd.Parameters.AddWithValue("@createdAt", createdAt);
         cmd.Parameters.AddWithValue("@embedding", embedding is not null ? (object)EmbeddingToBlob(embedding) : DBNull.Value);
+        cmd.Parameters.AddWithValue("@decayDays", decayDays);
         await cmd.ExecuteNonQueryAsync(ct);
 
-        return new Memory(id, workspaceId, type, content, source, tags, importance, createdAt, null);
+        return new Memory(id, workspaceId, type, content, source, tags, importance, createdAt, null,
+            LastRecalledAt: null, DecayDays: decayDays);
     }
 
     /// <summary>Returns the memory with <paramref name="id"/>, or null if not found.</summary>

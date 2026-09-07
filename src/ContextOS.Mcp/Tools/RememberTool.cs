@@ -12,13 +12,13 @@ namespace ContextOS.Mcp.Tools;
 public sealed class RememberTool(IMemoryStore store, WorkspaceContext ws, ILogger<RememberTool> logger)
 {
     private static readonly HashSet<string> ValidTypes =
-        [MemoryTypes.Note, MemoryTypes.Decision, MemoryTypes.Gotcha, MemoryTypes.Todo];
+        [MemoryTypes.Note, MemoryTypes.Decision, MemoryTypes.Gotcha, MemoryTypes.Todo, MemoryTypes.Skill];
 
     [McpServerTool(Name = "remember")]
     [Description("Store a memory for later recall.")]
     public async Task<string> RememberAsync(
         [Description("The content to store.")] string content,
-        [Description("Memory type: note, decision, gotcha, or todo.")] string type = "note",
+        [Description("Memory type: note, decision, gotcha, todo, or skill.")] string type = "note",
         [Description("Comma-separated tags.")] string? tags = null,
         [Description("Importance from 0.0 to 1.0.")] double importance = 0.5,
         CancellationToken ct = default)
@@ -26,7 +26,7 @@ public sealed class RememberTool(IMemoryStore store, WorkspaceContext ws, ILogge
         if (string.IsNullOrWhiteSpace(content))
             throw new ArgumentException("content must not be empty.");
         if (!ValidTypes.Contains(type))
-            throw new ArgumentException($"type must be one of: note, decision, gotcha, todo. Got: {type}");
+            throw new ArgumentException($"type must be one of: note, decision, gotcha, todo, skill. Got: {type}");
         if (importance < 0.0 || importance > 1.0)
             throw new ArgumentException($"importance must be between 0.0 and 1.0. Got: {importance}");
 

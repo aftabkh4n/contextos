@@ -213,6 +213,7 @@ builder.Services.AddMcpServer(options =>
     })
     .WithStdioServerTransport()
     .WithTools<RememberTool>()
+    .WithTools<RememberSkillTool>()
     .WithTools<RecallTool>()
     .WithTools<ContextTool>();
 

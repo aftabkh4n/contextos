@@ -116,7 +116,7 @@ public sealed class ToolErrorHandlingTests
     {
         public Task<Memory> AddMemoryAsync(string workspaceId, string type, string content,
             string? source = null, string? tags = null, double importance = 0.5,
-            CancellationToken ct = default)
+            int decayDays = 90, CancellationToken ct = default)
             => throw new InvalidOperationException("Simulated DB failure.");
 
         public Task<Memory?> GetMemoryByIdAsync(string id, CancellationToken ct = default)
