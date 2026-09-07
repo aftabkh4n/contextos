@@ -151,5 +151,8 @@ public sealed class ToolErrorHandlingTests
         public Task<IReadOnlyList<SearchResult>> SearchAsync(string workspaceId, string query,
             int k = 5, IReadOnlyCollection<string>? types = null, CancellationToken ct = default)
             => throw new InvalidOperationException("Simulated search failure.");
+
+        public Task<SearchResult[]> SearchGlobalAsync(string query, int k = 10, CancellationToken ct = default)
+            => Task.FromResult(Array.Empty<SearchResult>());
     }
 }

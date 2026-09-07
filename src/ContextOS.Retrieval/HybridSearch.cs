@@ -1,5 +1,8 @@
 using ContextOS.Core;
+using ContextOS.Embeddings;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ContextOS.Retrieval;
 
@@ -15,14 +18,28 @@ public sealed class HybridSearch : ISearch
 {
     private readonly SqliteConnection _conn;
     private readonly IEmbeddingsProvider _embeddings;
+    private readonly ILogger<HybridSearch> _logger;
+    private readonly string? _contextosHomeOverride;
 
     /// <param name="conn">Open connection — pass <c>SqliteStore.Connection</c>.</param>
     /// <param name="embeddings">Provider used to embed the query at search time.</param>
-    public HybridSearch(SqliteConnection conn, IEmbeddingsProvider embeddings)
+    /// <param name="logger">Optional logger; defaults to NullLogger.</param>
+    /// <param name="contextosHomeOverride">Override CONTEXTOS_HOME for global search (used in tests).</param>
+    public HybridSearch(
+        SqliteConnection conn,
+        IEmbeddingsProvider embeddings,
+        ILogger<HybridSearch>? logger = null,
+        string? contextosHomeOverride = null)
     {
         _conn = conn;
         _embeddings = embeddings;
+        _logger = logger ?? NullLogger<HybridSearch>.Instance;
+        _contextosHomeOverride = contextosHomeOverride;
     }
+
+    // -------------------------------------------------------------------------
+    // Single-workspace search
+    // -------------------------------------------------------------------------
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<SearchResult>> SearchAsync(
@@ -34,14 +51,14 @@ public sealed class HybridSearch : ISearch
     {
         float[] queryVec = await _embeddings.EmbedAsync(query, ct);
 
-        List<long> vecRowids = await VectorSearchAsync(workspaceId, queryVec, 20, ct);
-        List<long> ftsRowids = await FtsSearchAsync(workspaceId, query, 20, ct);
+        List<long> vecRowids = await VectorSearchAsync(_conn, workspaceId, queryVec, 20, ct);
+        List<long> ftsRowids = await FtsSearchAsync(_conn, workspaceId, query, 20, ct);
 
         Dictionary<long, double> rrfScores = Rrf(vecRowids, ftsRowids);
         if (rrfScores.Count == 0)
             return [];
 
-        var rows = await FetchMemoriesAsync(workspaceId, rrfScores.Keys, types, ct);
+        var rows = await FetchMemoriesAsync(_conn, workspaceId, rrfScores.Keys, types, ct);
         if (rows.Count == 0)
             return [];
 
@@ -61,13 +78,132 @@ public sealed class HybridSearch : ISearch
     }
 
     // -------------------------------------------------------------------------
+    // Cross-workspace search
+    // -------------------------------------------------------------------------
+
+    /// <inheritdoc />
+    public async Task<SearchResult[]> SearchGlobalAsync(
+        string query,
+        int k = 10,
+        CancellationToken ct = default)
+    {
+        string home = _contextosHomeOverride ?? EmbeddingsFactory.GetContextosHome();
+        if (!Directory.Exists(home))
+            return [];
+
+        // Exclude the current workspace DB so it is not double-counted.
+        bool currentIsMemory = string.IsNullOrEmpty(_conn.DataSource) ||
+            string.Equals(_conn.DataSource, ":memory:", StringComparison.OrdinalIgnoreCase);
+        string currentDbFull = currentIsMemory ? string.Empty : Path.GetFullPath(_conn.DataSource);
+
+        string[] dbFiles = Directory.GetFiles(home, "*.db");
+
+        // Embed query once; fall back to keyword-only if embedding fails.
+        float[] queryVec;
+        bool hasQueryVec;
+        try
+        {
+            queryVec = await _embeddings.EmbedAsync(query, ct);
+            hasQueryVec = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "GlobalSearch: failed to embed query, using keyword-only search");
+            queryVec = [];
+            hasQueryVec = false;
+        }
+
+        // TODO: parallelize at >20 workspaces
+        var workspaceRankedLists = new List<List<SearchResult>>();
+        var idToResult = new Dictionary<string, SearchResult>();
+
+        foreach (string dbFile in dbFiles)
+        {
+            string dbFileFull = Path.GetFullPath(dbFile);
+            if (!currentIsMemory &&
+                string.Equals(dbFileFull, currentDbFull, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try
+            {
+                await using var foreignConn = new SqliteConnection($"Data Source={dbFile};Mode=ReadOnly");
+                await foreignConn.OpenAsync(ct);
+
+                string? workspaceId = null, workspaceName = null;
+                using (SqliteCommand cmd = foreignConn.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT id, name FROM workspaces LIMIT 1";
+                    using SqliteDataReader reader = await cmd.ExecuteReaderAsync(ct);
+                    if (await reader.ReadAsync(ct))
+                    {
+                        workspaceId = reader.GetString(0);
+                        workspaceName = reader.GetString(1);
+                    }
+                }
+                if (workspaceId is null) continue;
+
+                List<long> vecRowids = hasQueryVec
+                    ? await VectorSearchAsync(foreignConn, workspaceId, queryVec, 10, ct)
+                    : [];
+                List<long> ftsRowids = await FtsSearchAsync(foreignConn, workspaceId, query, 10, ct);
+
+                Dictionary<long, double> rrfScores = Rrf(vecRowids, ftsRowids);
+                if (rrfScores.Count == 0) continue;
+
+                var rows = await FetchMemoriesAsync(foreignConn, workspaceId, rrfScores.Keys, null, ct);
+                if (rows.Count == 0) continue;
+
+                long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var wsResults = new List<SearchResult>(rows.Count);
+                foreach ((long rowid, Memory m) in rows)
+                {
+                    if (!rrfScores.TryGetValue(rowid, out double rrf)) continue;
+                    double score = rrf * Scoring.RecencyImportance(m.CreatedAt / 1000, m.Importance, nowMs / 1000);
+                    string[] tags = m.Tags?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
+                    wsResults.Add(new SearchResult(m.Id, m.Type, m.Content, tags, m.CreatedAt, score, workspaceName));
+                }
+
+                wsResults.Sort((a, b) => b.Score.CompareTo(a.Score));
+
+                var top5 = wsResults.Take(5).ToList();
+                workspaceRankedLists.Add(top5);
+                foreach (SearchResult r in top5)
+                    idToResult.TryAdd(r.Id, r);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "GlobalSearch: skipping workspace DB {Path} due to error", dbFile);
+            }
+        }
+
+        if (idToResult.Count == 0) return [];
+
+        // Final RRF pass: each workspace's ranked list contributes 1/(60+rank+1) per position.
+        var finalRrf = new Dictionary<string, double>();
+        foreach (List<SearchResult> ranked in workspaceRankedLists)
+        {
+            for (int rank = 0; rank < ranked.Count; rank++)
+            {
+                string id = ranked[rank].Id;
+                finalRrf[id] = finalRrf.GetValueOrDefault(id) + 1.0 / (60 + rank + 1);
+            }
+        }
+
+        return finalRrf
+            .OrderByDescending(kv => kv.Value)
+            .Take(k)
+            .Select(kv => idToResult[kv.Key])
+            .ToArray();
+    }
+
+    // -------------------------------------------------------------------------
     // Vector search (managed cosine scan over embedding BLOBs)
     // -------------------------------------------------------------------------
 
-    private async Task<List<long>> VectorSearchAsync(
-        string workspaceId, float[] queryVec, int limit, CancellationToken ct)
+    private static async Task<List<long>> VectorSearchAsync(
+        SqliteConnection conn, string workspaceId, float[] queryVec, int limit, CancellationToken ct)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = conn.CreateCommand();
         cmd.CommandText = """
             SELECT rowid, embedding FROM memories
             WHERE workspace_id = @workspaceId
@@ -93,14 +229,14 @@ public sealed class HybridSearch : ISearch
     // FTS5 search
     // -------------------------------------------------------------------------
 
-    private async Task<List<long>> FtsSearchAsync(
-        string workspaceId, string query, int limit, CancellationToken ct)
+    private static async Task<List<long>> FtsSearchAsync(
+        SqliteConnection conn, string workspaceId, string query, int limit, CancellationToken ct)
     {
         string ftsQuery = BuildFtsQuery(query);
         if (ftsQuery.Length == 0)
             return [];
 
-        using var cmd = _conn.CreateCommand();
+        using var cmd = conn.CreateCommand();
         // Inner subquery limits the FTS scan to this workspace's non-archived rows.
         cmd.CommandText = $"""
             SELECT rowid FROM memories_fts
@@ -152,7 +288,8 @@ public sealed class HybridSearch : ISearch
     // Fetch memories for final reranking
     // -------------------------------------------------------------------------
 
-    private async Task<List<(long rowid, Memory memory)>> FetchMemoriesAsync(
+    private static async Task<List<(long rowid, Memory memory)>> FetchMemoriesAsync(
+        SqliteConnection conn,
         string workspaceId,
         IEnumerable<long> rowids,
         IReadOnlyCollection<string>? types,
@@ -167,7 +304,7 @@ public sealed class HybridSearch : ISearch
             ? $"AND type IN ({string.Join(",", Enumerable.Range(0, types.Count).Select(i => $"@t{i}"))})"
             : string.Empty;
 
-        using var cmd = _conn.CreateCommand();
+        using var cmd = conn.CreateCommand();
         cmd.CommandText = $"""
             SELECT rowid, id, workspace_id, type, content, source, tags, importance, created_at, archived_at
             FROM memories
