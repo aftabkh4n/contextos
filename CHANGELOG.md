@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.2.0 -- 2026-09-07
+
+### Added
+- Memory decay: memories auto-archive after decay_days of
+  inactivity (default 90 days). Per-row override via
+  decay_days=0 pins a memory permanently. Configurable
+  via memory.decayDays in config.json.
+- Skill memory type: new `remember_skill` MCP tool stores
+  reusable procedures with name, steps, and outcome.
+  Skills appear in context and hydration blobs. Skills
+  never decay (pinned at creation).
+- Cross-workspace search: `recall` now accepts
+  scope="global" to search across all workspace DBs
+  in ~/.contextos/. Results include workspace name.
+  Corrupt or locked DBs are skipped gracefully.
+
+### Changed
+- Context tool now includes a Skills section between
+  Active tasks and Recent decisions.
+- Auto-hydration blob includes top-3 skills.
+- AddMemoryAsync accepts decayDays parameter for
+  per-memory pin at creation time.
+
+### Fixed
+- In-memory SQLite connections correctly excluded from
+  global search workspace scan.
+
+---
+
 ## v0.1.3 -- 2026-08-11
 
 ### Fixes
