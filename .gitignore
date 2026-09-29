@@ -487,3 +487,4 @@ src/ContextOS.Embeddings/Models/vocab.txt
 
 # ContextOS: local publish output
 dist/
+.claude/
