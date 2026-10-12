@@ -1,0 +1,15 @@
+{
+  "name": "contextos",
+  "description": "ContextOS marketplace: the persistent engineering memory plugin.",
+  "owner": {
+    "name": "Aftab Bashir",
+    "url": "https://github.com/aftabkh4n"
+  },
+  "plugins": [
+    {
+      "name": "contextos",
+      "description": "Persistent engineering memory for AI coding agents",
+      "source": "./plugins/contextos"
+    }
+  ]
+}
