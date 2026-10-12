@@ -142,7 +142,7 @@ public sealed class AutoHydrationTests : IAsyncLifetime
             .GetProperty("instructions")
             .GetString()!;
 
-        Assert.Contains("automatically loaded by ContextOS", instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ContextOS workspace context", instructions, StringComparison.OrdinalIgnoreCase);
     }
 
     // -------------------------------------------------------------------------

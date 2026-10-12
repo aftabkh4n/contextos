@@ -10,13 +10,13 @@ namespace ContextOS.Mcp.Tools;
 public sealed class RememberSkillTool(IMemoryStore store, WorkspaceContext ws, ILogger<RememberSkillTool> logger)
 {
     [McpServerTool(Name = "remember_skill")]
-    [Description("Store a reusable skill (a named procedure with steps and a success outcome).")]
+    [Description("Store a reusable skill, pinned and never decays.")]
     public async Task<string> RememberSkillAsync(
-        [Description("Short label for the skill, e.g. 'deploy to production'.")] string name,
-        [Description("Numbered steps as plain text.")] string steps,
-        [Description("What success looks like.")] string outcome,
-        [Description("Comma-separated tags.")] string? tags = null,
-        [Description("Importance from 0.0 to 1.0.")] double importance = 0.8,
+        [Description("Short label")] string name,
+        [Description("Numbered steps")] string steps,
+        [Description("Success outcome")] string outcome,
+        [Description("Comma-separated tags")] string? tags = null,
+        [Description("0.0-1.0")] double importance = 0.8,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(name))

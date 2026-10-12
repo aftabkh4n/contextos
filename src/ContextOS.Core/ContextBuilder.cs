@@ -9,7 +9,8 @@ namespace ContextOS.Core;
 public static class ContextBuilder
 {
     private const int DefaultMaxBytes = 2048;
-    private const string TruncationNote = "\n(truncated to fit 2 KB budget)";
+    private const int CommitMessageMax = 50;
+    private const string TruncationNote = "\n(truncated)";
 
     /// <summary>
     /// Builds the context markdown for the given workspace and scope.
@@ -113,70 +114,68 @@ public static class ContextBuilder
         long nowMs, GitInfo? gitInfo)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"# ContextOS workspace: {workspaceName}");
-        sb.AppendLine();
-        sb.AppendLine("## Branch");
+        sb.Append("# ContextOS workspace: ").Append(workspaceName).Append('\n');
 
-        if (gitInfo is null)
+        if (gitInfo is not null)
         {
-            sb.AppendLine("(not a git repository)");
-        }
-        else if (gitInfo.Branch is null)
-        {
-            sb.AppendLine("(detached HEAD)");
-        }
-        else
-        {
-            string dirtyNote = gitInfo.UncommittedFileCount > 0
-                ? $" ({gitInfo.UncommittedFileCount} uncommitted file{(gitInfo.UncommittedFileCount == 1 ? "" : "s")})"
-                : "";
-            sb.AppendLine($"{gitInfo.Branch}{dirtyNote}");
+            sb.Append('\n');
+            if (gitInfo.Branch is null)
+            {
+                sb.Append("Branch: (detached HEAD)\n");
+            }
+            else
+            {
+                string dirtyNote = gitInfo.UncommittedFileCount > 0
+                    ? $" ({gitInfo.UncommittedFileCount} uncommitted file{(gitInfo.UncommittedFileCount == 1 ? "" : "s")})"
+                    : "";
+                sb.Append("Branch: ").Append(gitInfo.Branch).Append(dirtyNote).Append('\n');
+            }
 
             if (gitInfo.RecentCommits.Count > 0)
             {
-                sb.AppendLine();
-                sb.AppendLine("Recent commits:");
-                long nowUnix = nowMs / 1000;
+                sb.Append("Recent commits:\n");
                 foreach (GitCommit c in gitInfo.RecentCommits.Take(3))
                 {
+                    string msg = c.Message.Length > CommitMessageMax
+                        ? c.Message[..CommitMessageMax] + "..."
+                        : c.Message;
                     string age = FormatAge(c.CommittedAtUnix * 1000, nowMs);
-                    sb.AppendLine($"- {c.ShortSha} ({age}) {c.Message}");
+                    sb.Append("- ").Append(c.ShortSha).Append(" (").Append(age).Append(") ").Append(msg).Append('\n');
                 }
             }
         }
 
-        sb.AppendLine();
-        sb.AppendLine("## Active tasks");
-        if (activeTasks.Count == 0)
-            sb.AppendLine("(none)");
-        else
+        if (activeTasks.Count > 0)
+        {
+            sb.Append('\n').Append("Active tasks:\n");
             foreach (Memory m in activeTasks)
             {
                 string label = m.Type == MemoryTypes.Todo ? "todo" : "active";
-                sb.AppendLine($"- [{label}] {m.Content} (created {FormatAge(m.CreatedAt, nowMs)})");
+                sb.Append("- [").Append(label).Append("] ").Append(m.Content)
+                  .Append(" (").Append(FormatAge(m.CreatedAt, nowMs)).Append(")\n");
             }
+        }
 
-        sb.AppendLine();
-        sb.AppendLine("## Skills");
-        if (skills.Count == 0)
-            sb.AppendLine("None recorded.");
-        else
+        if (skills.Count > 0)
+        {
+            sb.Append('\n').Append("Skills:\n");
             foreach (Memory m in skills)
             {
                 string skillName = ExtractSkillName(m.Content);
                 string outcome = ExtractOutcome(m.Content);
                 string summary = outcome.Length > 60 ? outcome[..60] : outcome;
                 string tagsNote = m.Tags is not null ? $" (tags: {m.Tags})" : "";
-                sb.AppendLine($"- {skillName} -- {summary}{tagsNote}");
+                sb.Append("- ").Append(skillName).Append(" -- ").Append(summary).Append(tagsNote).Append('\n');
             }
+        }
 
-        sb.AppendLine();
-        sb.AppendLine("## Recent decisions");
-        if (decisions.Count == 0)
-            sb.AppendLine("(none)");
-        else
+        if (decisions.Count > 0)
+        {
+            sb.Append('\n').Append("Recent decisions:\n");
             foreach (Memory m in decisions)
-                sb.AppendLine($"- {m.Content} (importance {m.Importance:F1})");
+                sb.Append("- ").Append(m.Content).Append($" (importance {m.Importance:F1})\n");
+        }
+
         return sb.ToString();
     }
 

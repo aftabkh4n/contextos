@@ -102,12 +102,12 @@ public sealed class SkillTests : IAsyncLifetime
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task Context_ShowsSkillsSectionHeader_WhenNoSkillsExist()
+    public async Task Context_OmitsSkillsSection_WhenNoSkillsExist()
     {
         string md = await ContextBuilder.BuildAsync(_store, Ws, Name);
 
-        Assert.Contains("## Skills", md);
-        Assert.Contains("None recorded.", md);
+        Assert.DoesNotContain("Skills:", md);
+        Assert.DoesNotContain("None recorded", md);
     }
 
     [Fact]
@@ -121,9 +121,8 @@ public sealed class SkillTests : IAsyncLifetime
 
         string md = await ContextBuilder.BuildAsync(_store, Ws, Name);
 
-        Assert.Contains("## Skills", md);
+        Assert.Contains("Skills:", md);
         Assert.Contains("roll back a deployment", md);
-        Assert.DoesNotContain("None recorded.", md);
     }
 
     // -------------------------------------------------------------------------

@@ -11,23 +11,19 @@ public static class HydrationBuilder
 {
     /// <summary>
     /// Returned when there are no memories and no git info for a workspace.
-    /// Tells the agent where it is without wasting tokens on empty sections.
+    /// Single line: tells the agent not to go searching for prior work.
     /// </summary>
     public const string EmptyWorkspaceMessage =
-        "ContextOS connected. No memory yet for this workspace. " +
-        "Use the remember tool to store decisions, todos, and notes.";
+        "ContextOS: no stored memory for this workspace. Do not search for prior work; tell the user nothing is recorded.";
 
-    private const string Framing =
-        "The following is the persistent engineering context for the current workspace, " +
-        "automatically loaded by ContextOS. Treat it as background knowledge the user " +
-        "expects you to already have.\n\n";
+    private const string Framing = "ContextOS workspace context (auto-loaded):\n\n";
 
-    private const int MaxTotalBytes = 2048;
+    private const int MaxTotalBytes = 1000;
 
     /// <summary>
     /// Builds the instructions string for the MCP initialize response.
     /// Returns <see cref="EmptyWorkspaceMessage"/> when there are no memories and no git info.
-    /// The returned string is always at or under 2 KB in UTF-8.
+    /// The returned string is always at or under 1000 bytes in UTF-8.
     /// </summary>
     public static async Task<string> BuildAsync(
         IMemoryStore store,

@@ -4,7 +4,7 @@ set -euo pipefail
 PLUGIN_DATA="${CLAUDE_PLUGIN_DATA}"
 BIN_DIR="$PLUGIN_DATA/bin"
 BINARY="$BIN_DIR/contextos"
-VERSION="0.2.0"
+VERSION="0.2.1"
 BASE_URL="https://github.com/aftabkh4n/contextos/releases/download/v${VERSION}"
 
 OS="$(uname -s)"

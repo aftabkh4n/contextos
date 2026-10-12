@@ -15,12 +15,12 @@ public sealed class RememberTool(IMemoryStore store, WorkspaceContext ws, ILogge
         [MemoryTypes.Note, MemoryTypes.Decision, MemoryTypes.Gotcha, MemoryTypes.Todo, MemoryTypes.Skill];
 
     [McpServerTool(Name = "remember")]
-    [Description("Store a memory for later recall.")]
+    [Description("Store a memory.")]
     public async Task<string> RememberAsync(
-        [Description("The content to store.")] string content,
-        [Description("Memory type: note, decision, gotcha, todo, or skill.")] string type = "note",
-        [Description("Comma-separated tags.")] string? tags = null,
-        [Description("Importance from 0.0 to 1.0.")] double importance = 0.5,
+        [Description("Content")] string content,
+        [Description("note, decision, gotcha, todo, skill")] string type = "note",
+        [Description("Comma-separated tags")] string? tags = null,
+        [Description("0.0-1.0")] double importance = 0.5,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(content))

@@ -40,26 +40,24 @@ public sealed class ContextToolTests : IAsyncLifetime
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task Current_EmptyWorkspace_AllSectionHeadersPresent()
+    public async Task Current_EmptyWorkspace_ShowsWorkspaceHeaderOnly()
     {
         string md = await Context("current");
 
         Assert.Contains($"# ContextOS workspace: {WorkspaceName}", md);
-        Assert.Contains("## Branch", md);
-        Assert.Contains("## Active tasks", md);
-        Assert.Contains("## Recent decisions", md);
+        Assert.DoesNotContain("Active tasks:", md);
+        Assert.DoesNotContain("Recent decisions:", md);
         Assert.True(Encoding.UTF8.GetByteCount(md) < 2048,
             $"Empty context must be well under 2 KB. Got {Encoding.UTF8.GetByteCount(md)} bytes.");
     }
 
     [Fact]
-    public async Task Current_EmptyWorkspace_SectionsShowNonePlaceholder()
+    public async Task Current_EmptyWorkspace_HasNoPlaceholders()
     {
         string md = await Context("current");
 
-        // Should contain "(none)" for both empty sections.
-        int noneCount = CountOccurrences(md, "(none)");
-        Assert.True(noneCount >= 2, $"Expected at least 2 '(none)' placeholders, got {noneCount}. Output:\n{md}");
+        Assert.DoesNotContain("(none)", md);
+        Assert.DoesNotContain("None recorded", md);
     }
 
     // -------------------------------------------------------------------------
@@ -168,7 +166,7 @@ public sealed class ContextToolTests : IAsyncLifetime
 
         Assert.True(Encoding.UTF8.GetByteCount(md) <= 2048,
             $"Output must fit in 2 KB. Got {Encoding.UTF8.GetByteCount(md)} bytes.");
-        Assert.Contains("truncated to fit 2 KB budget", md);
+        Assert.Contains("(truncated)", md);
     }
 
     [Fact]
@@ -216,11 +214,11 @@ public sealed class ContextToolTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Current_WithNullGitInfo_ShowsNotAGitRepository()
+    public async Task Current_WithNullGitInfo_OmitsBranchSection()
     {
         string md = await ContextBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, "current", gitInfo: null);
 
-        Assert.Contains("(not a git repository)", md);
+        Assert.DoesNotContain("Branch:", md);
     }
 
     [Fact]

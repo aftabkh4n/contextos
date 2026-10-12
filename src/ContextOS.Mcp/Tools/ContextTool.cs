@@ -9,9 +9,9 @@ namespace ContextOS.Mcp.Tools;
 public sealed class ContextTool(IMemoryStore store, WorkspaceContext ws, ILogger<ContextTool> logger)
 {
     [McpServerTool(Name = "context")]
-    [Description("Assemble the current engineering context for this workspace.")]
+    [Description("Markdown summary of workspace context.")]
     public async Task<string> ContextAsync(
-        [Description("Scope: current, week, or all.")] string scope = "current",
+        [Description("current, week, or all")] string scope = "current",
         CancellationToken ct = default)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

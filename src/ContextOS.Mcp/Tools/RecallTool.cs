@@ -12,12 +12,12 @@ namespace ContextOS.Mcp.Tools;
 public sealed class RecallTool(ISearch search, WorkspaceContext ws, ILogger<RecallTool> logger)
 {
     [McpServerTool(Name = "recall")]
-    [Description("Search stored memories by semantic and keyword similarity. Use scope='global' to search across all workspaces.")]
+    [Description("Hybrid search over stored memories.")]
     public async Task<string> RecallAsync(
-        [Description("Search query.")] string query,
-        [Description("Number of results to return (1-20).")] int k = 5,
-        [Description("Filter by memory type.")] string[]? types = null,
-        [Description("Search scope: 'current' (default) or 'global'.")] string scope = "current",
+        [Description("Search query")] string query,
+        [Description("Max results, 1-20")] int k = 5,
+        [Description("Types filter")] string[]? types = null,
+        [Description("current or global")] string scope = "current",
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -38,17 +38,7 @@ public sealed class RecallTool(ISearch search, WorkspaceContext ws, ILogger<Reca
                     "recall(global): query_hash={Hash} k={K} found={Count} elapsed={ElapsedMs}ms",
                     ContentFingerprint(query), k, results.Length, sw.ElapsedMilliseconds);
 
-                var items = results.Select(r => new
-                {
-                    id = r.Id,
-                    type = r.Type,
-                    content = r.Content,
-                    tags = r.Tags,
-                    created_at = r.CreatedAt,
-                    score = r.Score,
-                    workspace = r.WorkspaceName,
-                });
-                return JsonSerializer.Serialize(items);
+                return JsonSerializer.Serialize(results.Select(Compact));
             }
             else
             {
@@ -59,16 +49,7 @@ public sealed class RecallTool(ISearch search, WorkspaceContext ws, ILogger<Reca
                     "recall: query_hash={Hash} k={K} found={Count} elapsed={ElapsedMs}ms",
                     ContentFingerprint(query), k, results.Count, sw.ElapsedMilliseconds);
 
-                var items = results.Select(r => new
-                {
-                    id = r.Id,
-                    type = r.Type,
-                    content = r.Content,
-                    tags = r.Tags,
-                    created_at = r.CreatedAt,
-                    score = r.Score,
-                });
-                return JsonSerializer.Serialize(items);
+                return JsonSerializer.Serialize(results.Select(Compact));
             }
         }
         catch (ArgumentException)
@@ -82,6 +63,25 @@ public sealed class RecallTool(ISearch search, WorkspaceContext ws, ILogger<Reca
                 ws.WorkspaceId, scope, ContentFingerprint(query));
             throw new InvalidOperationException("Search failed. Check the server logs for details.");
         }
+    }
+
+    private const int ContentMaxChars = 300;
+
+    private static Dictionary<string, object> Compact(SearchResult r)
+    {
+        string content = r.Content.Length > ContentMaxChars
+            ? r.Content[..ContentMaxChars] + "..."
+            : r.Content;
+
+        var d = new Dictionary<string, object>
+        {
+            ["id"] = r.Id,
+            ["type"] = r.Type,
+            ["content"] = content,
+            ["score"] = r.Score,
+        };
+        if (r.WorkspaceName is not null) d["workspace"] = r.WorkspaceName;
+        return d;
     }
 
     private static string ContentFingerprint(string s) =>

@@ -26,6 +26,12 @@ Storage is local SQLite, one file per workspace under `~/.contextos/`.
 
 ## Install
 
+**Claude Code plugin (recommended):**
+```
+/plugin marketplace add aftabkh4n/contextos
+/plugin install contextos@contextos
+```
+
 **macOS / Linux:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/aftabkh4n/contextos/main/install.sh | bash

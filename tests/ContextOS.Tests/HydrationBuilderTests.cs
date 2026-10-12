@@ -1,7 +1,6 @@
 using System.Text;
 using ContextOS.Core;
 using ContextOS.Storage;
-using Microsoft.Data.Sqlite;
 
 namespace ContextOS.Tests;
 
@@ -42,6 +41,12 @@ public sealed class HydrationBuilderTests : IAsyncLifetime
     }
 
     [Fact]
+    public void EmptyWorkspaceMessage_IsSingleLine()
+    {
+        Assert.DoesNotContain('\n', HydrationBuilder.EmptyWorkspaceMessage);
+    }
+
+    [Fact]
     public async Task DoesNotReturnEmptyMessage_WhenGitInfoPresent()
     {
         var gitInfo = new GitInfo("main", [], 0);
@@ -66,7 +71,7 @@ public sealed class HydrationBuilderTests : IAsyncLifetime
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task ReturnsBlobWithAllSections_WhenDataExists()
+    public async Task ReturnsBlobWithPopulatedSections_WhenDataExists()
     {
         await Add("Fix the login bug", "todo");
         await Add("Use SQLite over Postgres for zero-dependency installs", "decision", importance: 0.9);
@@ -80,13 +85,42 @@ public sealed class HydrationBuilderTests : IAsyncLifetime
 
         string blob = await HydrationBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, gitInfo);
 
-        Assert.Contains("## Branch", blob);
-        Assert.Contains("## Active tasks", blob);
-        Assert.Contains("## Recent decisions", blob);
+        Assert.Contains("Branch: feature/outbox", blob);
+        Assert.Contains("Active tasks:", blob);
+        Assert.Contains("Recent decisions:", blob);
         Assert.Contains("Fix the login bug", blob);
         Assert.Contains("Use SQLite over Postgres", blob);
-        Assert.Contains("feature/outbox", blob);
         Assert.Contains("aabbccd", blob);
+    }
+
+    [Fact]
+    public async Task OmitsEmptySections()
+    {
+        var gitInfo = new GitInfo("main", [], 0);
+        string blob = await HydrationBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, gitInfo);
+
+        Assert.DoesNotContain("Active tasks:", blob);
+        Assert.DoesNotContain("Skills:", blob);
+        Assert.DoesNotContain("Recent decisions:", blob);
+        Assert.DoesNotContain("(none)", blob);
+    }
+
+    [Fact]
+    public async Task CommitMessagesTruncatedToFiftyChars()
+    {
+        string longMsg = new('m', 120);
+        var commits = new List<GitCommit>
+        {
+            new("abcdef1234567890", "abcdef1", longMsg, "Dev",
+                DateTimeOffset.UtcNow.AddMinutes(-5).ToUnixTimeSeconds()),
+        };
+        var gitInfo = new GitInfo("main", commits, 0);
+
+        string blob = await HydrationBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, gitInfo);
+
+        Assert.Contains("abcdef1", blob);
+        Assert.Contains(new string('m', 50) + "...", blob);
+        Assert.DoesNotContain(new string('m', 60), blob);
     }
 
     [Fact]
@@ -96,7 +130,7 @@ public sealed class HydrationBuilderTests : IAsyncLifetime
 
         string blob = await HydrationBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, gitInfo: null);
 
-        Assert.StartsWith("The following is the persistent engineering context", blob);
+        Assert.StartsWith("ContextOS workspace context", blob);
     }
 
     // -------------------------------------------------------------------------
@@ -104,28 +138,26 @@ public sealed class HydrationBuilderTests : IAsyncLifetime
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task BlobIsUnder2KB_EvenWithManyMemoriesAndLongCommitMessages()
+    public async Task BlobIsUnder1000Chars_WithTwentyDecisionsTwentyTodosTenCommits()
     {
-        // 10 todos (max shown in current scope) with long content.
-        string longLine = new('x', 200);
-        for (int i = 0; i < 12; i++)
+        string longLine = new('x', 120);
+        for (int i = 0; i < 20; i++)
             await Add($"Todo {i:D2}: {longLine}", "todo");
 
-        // 3 decisions with long content.
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 20; i++)
             await Add($"Decision {i:D2}: {longLine}", "decision", importance: 0.8);
 
-        var commits = new List<GitCommit>
-        {
-            new("aabbccdd11223344", "aabbccd", new string('m', 200), "Dev",
-                DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds()),
-        };
+        var commits = new List<GitCommit>();
+        for (int i = 0; i < 10; i++)
+            commits.Add(new($"sha{i:D13}", $"sha{i:D4}", new string('m', 200), "Dev",
+                DateTimeOffset.UtcNow.AddHours(-i - 1).ToUnixTimeSeconds()));
         var gitInfo = new GitInfo("feature/very-long-branch-name-that-keeps-going", commits, 99);
 
         string blob = await HydrationBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, gitInfo);
 
-        int bytes = Encoding.UTF8.GetByteCount(blob);
-        Assert.True(bytes <= 2048, $"Blob must be at most 2 KB. Got {bytes} bytes.\n---\n{blob}");
+        Assert.True(blob.Length <= 1000, $"Blob must be at most 1000 chars. Got {blob.Length}.\n---\n{blob}");
+        Assert.True(Encoding.UTF8.GetByteCount(blob) <= 1000,
+            $"Blob must be at most 1000 bytes. Got {Encoding.UTF8.GetByteCount(blob)} bytes.");
     }
 
     // -------------------------------------------------------------------------

@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.2.1 -- 2026-10-12
+
+### Fixed
+- Decay data loss on v0.2.0 upgrade: the V3 migration added
+  last_recalled_at as NULL for existing rows, so the first
+  v0.2.0 startup archived every memory older than decay_days
+  (90 by default). V3 now backfills last_recalled_at. A new
+  V4 repair migration restores rows that the broken decay pass
+  already archived (archived_at set, last_recalled_at NULL),
+  logging the restored count.
+
+### Changed
+- Auto-hydration blob is now capped at 1000 bytes (was 2 KB)
+  with a one-line framing. Empty sections are omitted; commit
+  messages truncate to 50 chars. Empty workspace returns a
+  single-line directive instead of a two-sentence paragraph.
+- Tool descriptions in tools/list reduced to one sentence per
+  tool and one short phrase per parameter.
+- recall results now return only id, type, content, score (and
+  workspace for scope="global"). Content is truncated to 300
+  chars with "..." when longer. null fields are omitted.
+- The ContextOS skill (SKILL.md) is now under 150 words and
+  tells the agent to answer "what was I working on?" from the
+  already-injected context without running tools.
+
+---
+
 ## v0.2.0 -- 2026-09-07
 
 ### Added

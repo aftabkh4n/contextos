@@ -6,7 +6,7 @@ Gives Claude Code persistent memory across sessions.
 
 ```
 /plugin marketplace add aftabkh4n/contextos
-/plugin install contextos
+/plugin install contextos@contextos
 ```
 
 The plugin downloads the right binary for your platform on first use.

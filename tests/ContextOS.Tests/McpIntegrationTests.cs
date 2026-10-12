@@ -126,8 +126,7 @@ public sealed class McpIntegrationTests : IAsyncLifetime
         Assert.True(result.TryGetProperty("instructions", out JsonElement instrEl),
             $"Expected 'instructions' field in initialize result. Got: {result}");
         string instructions = instrEl.GetString()!;
-        Assert.Contains("ContextOS connected", instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("No memory yet", instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no stored memory", instructions, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -240,9 +239,6 @@ public sealed class McpIntegrationTests : IAsyncLifetime
 
         string text = result.GetProperty("content")[0].GetProperty("text").GetString()!;
         Assert.Contains("# ContextOS workspace:", text);
-        Assert.Contains("## Branch", text);
-        Assert.Contains("## Active tasks", text);
-        Assert.Contains("## Recent decisions", text);
     }
 
     [Fact]
