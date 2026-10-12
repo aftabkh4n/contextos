@@ -1,5 +1,7 @@
 using ContextOS.Core;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ContextOS.Storage;
 
@@ -11,20 +13,23 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
 {
     private readonly SqliteConnection _conn;
     private readonly IEmbeddingsProvider? _embeddings;
+    private readonly ILogger _logger;
 
     /// <summary>The underlying connection, shared with HybridSearch so both use one SQLite handle.</summary>
     public SqliteConnection Connection => _conn;
 
-    private SqliteStore(SqliteConnection conn, IEmbeddingsProvider? embeddings)
+    private SqliteStore(SqliteConnection conn, IEmbeddingsProvider? embeddings, ILogger logger)
     {
         _conn = conn;
         _embeddings = embeddings;
+        _logger = logger;
     }
 
     /// <summary>Opens (or creates) the database at <paramref name="dbPath"/> and runs pending migrations.</summary>
     public static async Task<SqliteStore> OpenAsync(
         string dbPath,
         IEmbeddingsProvider? embeddings = null,
+        ILogger? logger = null,
         CancellationToken ct = default)
     {
         if (!string.Equals(dbPath, ":memory:", StringComparison.OrdinalIgnoreCase))
@@ -37,7 +42,7 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
         var conn = new SqliteConnection($"Data Source={dbPath}");
         await conn.OpenAsync(ct);
 
-        var store = new SqliteStore(conn, embeddings);
+        var store = new SqliteStore(conn, embeddings, logger ?? NullLogger.Instance);
         await store.InitAsync(ct);
 
         if (embeddings is not null)
@@ -66,6 +71,43 @@ public sealed class SqliteStore : IMemoryStore, IAsyncDisposable
             await ApplyAsync(Migrations.V2, 3, ct);
         if (version < 4)
             await ApplyAsync(Migrations.V3, 4, ct);
+        if (version < 5)
+            await ApplyRepairV4Async(ct);
+    }
+
+    // Version 5 restores rows that the broken v0.2.0 decay pass archived because
+    // the V3 ADD COLUMN left last_recalled_at NULL. Logs the restored row count.
+    private async Task ApplyRepairV4Async(CancellationToken ct)
+    {
+        using var tx = _conn.BeginTransaction();
+        try
+        {
+            int restored;
+            using (var cmd = _conn.CreateCommand())
+            {
+                cmd.Transaction = tx;
+                cmd.CommandText = Migrations.V4RepairSql;
+                restored = await cmd.ExecuteNonQueryAsync(ct);
+            }
+
+            using (var verCmd = _conn.CreateCommand())
+            {
+                verCmd.Transaction = tx;
+                verCmd.CommandText = "PRAGMA user_version = 5";
+                await verCmd.ExecuteNonQueryAsync(ct);
+            }
+
+            tx.Commit();
+
+            if (restored > 0)
+                _logger.LogInformation(
+                    "Restored {Count} memories that were archived by the v0.2.0 decay bug", restored);
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 
     private async Task<int> UserVersionAsync(CancellationToken ct)

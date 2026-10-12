@@ -10,4 +10,8 @@
     <ProjectReference Include="..\ContextOS.Core\ContextOS.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ContextOS.Tests" />
+  </ItemGroup>
+
 </Project>

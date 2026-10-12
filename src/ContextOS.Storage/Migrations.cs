@@ -6,6 +6,8 @@ namespace ContextOS.Storage;
 //   1 — base schema (workspaces, memories, FTS5, hydration_log)
 //   2 — sqlite-vec memories_vec table (DROPPED before v1; slot permanently skipped)
 //   3 — embedding BLOB column on memories (v1 vector storage strategy)
+//   4 — decay tracking columns (last_recalled_at, decay_days); backfills existing rows
+//   5 — repair for v0.2.0 upgrade: restores memories decay-archived due to NULL last_recalled_at
 //
 // MigrateAsync jumps from 1 directly to 3, leaving slot 2 vacant. This avoids
 // misapplying the embedding migration to any database that was at version 2
@@ -87,10 +89,23 @@ internal static class Migrations
         "ALTER TABLE memories ADD COLUMN embedding BLOB",
     ];
 
-    // Version 4: decay tracking columns.
+    // Version 4: decay tracking columns. The backfill UPDATE prevents the DecayService
+    // from treating every pre-existing row as "never recalled" and archiving everything
+    // older than the global decay window on first startup after upgrading to v0.2.0.
     internal static readonly string[] V3 =
     [
         "ALTER TABLE memories ADD COLUMN last_recalled_at TEXT",
         "ALTER TABLE memories ADD COLUMN decay_days INTEGER NOT NULL DEFAULT 90",
+        "UPDATE memories SET last_recalled_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE last_recalled_at IS NULL",
     ];
+
+    // Version 5: repair for databases that already ran the broken V3 and had rows
+    // archived by the first v0.2.0 decay pass. There is no manual archive tool,
+    // so any archived row with NULL last_recalled_at was archived by decay. Restore
+    // and reset the recall clock. Executed via SqliteStore so the affected count
+    // can be logged.
+    internal const string V4RepairSql =
+        "UPDATE memories SET archived_at = NULL, " +
+        "last_recalled_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') " +
+        "WHERE archived_at IS NOT NULL AND last_recalled_at IS NULL";
 }

@@ -169,7 +169,9 @@ else
     gitProbeService = new NoOpGitProbe();
 }
 
-SqliteStore store = await SqliteStore.OpenAsync(dbPath, embeddings);
+using var storeLoggerFactory = LoggerFactory.Create(b => b.AddSerilog(Log.Logger, dispose: false));
+Microsoft.Extensions.Logging.ILogger storeLogger = storeLoggerFactory.CreateLogger("ContextOS.Storage");
+SqliteStore store = await SqliteStore.OpenAsync(dbPath, embeddings, storeLogger);
 
 var workspace = new Workspace(workspaceId, workspaceRoot, workspaceName, null,
     DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
