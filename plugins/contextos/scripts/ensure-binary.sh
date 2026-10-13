@@ -3,8 +3,8 @@ set -euo pipefail
 
 PLUGIN_DATA="${CLAUDE_PLUGIN_DATA}"
 BIN_DIR="$PLUGIN_DATA/bin"
-BINARY="$BIN_DIR/contextos"
 VERSION="0.2.1"
+VERSION_FILE="$BIN_DIR/.version"
 BASE_URL="https://github.com/aftabkh4n/contextos/releases/download/v${VERSION}"
 
 OS="$(uname -s)"
@@ -17,20 +17,27 @@ case "$OS" in
       x86_64) RID="osx-x64" ;;
       *) echo "ContextOS: unsupported macOS architecture: $ARCH" >&2; exit 1 ;;
     esac
+    BINARY="$BIN_DIR/contextos"
     ;;
   Linux)
     RID="linux-x64"
+    BINARY="$BIN_DIR/contextos"
     ;;
   *)
-    BINARY="$BIN_DIR/contextos.exe"
     RID="win-x64"
+    BINARY="$BIN_DIR/contextos.exe"
     ;;
 esac
 
-if [ -f "$BINARY" ]; then
+if [ -f "$BINARY" ] && [ -f "$VERSION_FILE" ] && [ "$(cat "$VERSION_FILE")" = "$VERSION" ]; then
   exit 0
 fi
 
+if [ "$RID" = "win-x64" ]; then
+  taskkill //F //IM contextos.exe >/dev/null 2>&1 || true
+fi
+
+rm -rf "${BIN_DIR:?}"
 mkdir -p "$BIN_DIR"
 
 ARCHIVE="contextos-${RID}"
@@ -56,4 +63,6 @@ else
   chmod +x "$BINARY"
 fi
 
-echo "ContextOS: binary installed at $BINARY" >&2
+printf '%s\n' "$VERSION" > "$VERSION_FILE"
+
+echo "ContextOS: binary $VERSION installed at $BINARY" >&2
