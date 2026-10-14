@@ -3,6 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>contextos</AssemblyName>
+    <!-- Runs without libicu on minimal Linux. Embedding output verified unchanged, see DECISIONS.md. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
     <!-- PublishSingleFile and IncludeNativeLibrariesForSelfExtract are passed
          as -p: arguments to dotnet publish only. Keeping them in the csproj
          injects bundle-mode metadata into the regular build output, which

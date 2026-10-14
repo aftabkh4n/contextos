@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.4 -- 2026-10-14
+
+### Fixed
+- The Linux binary no longer needs libicu. It crashed at startup on
+  systems without it (for example a stock WSL Ubuntu) with
+  "Couldn't find a valid ICU package installed on the system". The
+  binary now runs in invariant globalization mode.
+
+### Changed
+- Release archives no longer ship .pdb files, onnxruntime .lib
+  import libraries, or the static libe_sqlite3.a. Each archive now
+  holds only the binary and Models/.
+
+---
+
 ## v0.2.3 -- 2026-10-14
 
 ### Fixed
