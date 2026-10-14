@@ -55,8 +55,8 @@ jobs:
               -p:IncludeNativeLibrariesForSelfExtract=true \
               -p:DebugType=none -p:DebugSymbols=false \
               -o "dist/$rid"
-            # Import libs for native linking; nothing loads them at runtime.
-            rm -f "dist/$rid"/onnxruntime*.lib
+            # Import and static libs for native linking; nothing loads them at runtime.
+            rm -f "dist/$rid"/onnxruntime*.lib "dist/$rid"/libe_sqlite3.a
             case "$rid" in
               win-*)
                 (cd dist && zip -r "contextos-$rid.zip" "$rid")
