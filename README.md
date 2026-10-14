@@ -24,13 +24,20 @@ Storage is local SQLite, one file per workspace under `~/.contextos/`.
 
 ---
 
-## Install
+## Install (Claude Code)
 
-**Claude Code plugin (recommended):**
 ```
 /plugin marketplace add aftabkh4n/contextos
 /plugin install contextos@contextos
 ```
+
+Restart Claude Code. The first start downloads the binary for your
+platform. If contextos shows as failed in `/mcp`, choose Reconnect.
+This happens once per install or update.
+
+Then open any git repo and ask: "What was I working on?"
+
+## Other install options
 
 **macOS / Linux:**
 ```bash

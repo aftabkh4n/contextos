@@ -53,7 +53,10 @@ jobs:
               --self-contained true \
               -p:PublishSingleFile=true \
               -p:IncludeNativeLibrariesForSelfExtract=true \
+              -p:DebugType=none -p:DebugSymbols=false \
               -o "dist/$rid"
+            # Import libs for native linking; nothing loads them at runtime.
+            rm -f "dist/$rid"/onnxruntime*.lib
             case "$rid" in
               win-*)
                 (cd dist && zip -r "contextos-$rid.zip" "$rid")
