@@ -11,6 +11,9 @@ Gives Claude Code persistent memory across sessions.
 
 The plugin downloads the right binary for your platform on first use.
 
+After updating, if contextos shows as failed in `/mcp`, choose Reconnect.
+This happens once per update while the new version downloads.
+
 ## What it does
 
 - Stores decisions, todos, notes, and skills in a local SQLite database

@@ -1,6 +1,6 @@
 {
   "name": "contextos",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Persistent engineering memory for AI coding agents. Stores decisions, todos, and context across sessions. Auto-injects workspace state at session start.",
   "author": {
     "name": "Aftab Bashir",
@@ -12,7 +12,7 @@
   "keywords": ["memory", "mcp", "context", "decisions", "persistence"],
   "mcpServers": {
     "contextos": {
-      "command": "${CLAUDE_PLUGIN_DATA}/bin/contextos",
+      "command": "${CLAUDE_PLUGIN_DATA}/bin/0.2.3/contextos",
       "args": ["serve"]
     }
   }

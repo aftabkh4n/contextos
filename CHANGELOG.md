@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.2.3 -- 2026-10-14
+
+### Fixed
+- Plugin upgrades killed running ContextOS servers. On Windows,
+  ensure-binary.sh ran `taskkill` on every contextos.exe before
+  swapping the binary, so upgrading in one Claude Code window
+  killed the server in every other window. Each version now
+  installs into its own folder (bin/<version>) and plugin.json
+  points at that folder. No binary is ever replaced and no process
+  is killed. Old version folders are deleted at a later session
+  start, keeping the newest older one for windows still running it.
+- After an upgrade, the session start hook tells Claude that the
+  server may need a `/mcp` Reconnect, since Claude Code starts the
+  server while the new version is still downloading.
+
+---
+
 ## v0.2.2 -- 2026-10-14
 
 ### Fixed
