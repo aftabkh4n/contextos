@@ -9,6 +9,13 @@
   context" rule now sits in the always-loaded hydration blob
   (serverInfo.instructions) instead of only in SKILL.md, which
   loads on demand.
+- Plugin upgrade race: ensure-binary.sh deleted the old binary
+  before downloading the new one (about 118 MB). Claude Code
+  tried to start the server meanwhile, found nothing, and cached
+  the failure for 15 minutes. The script now downloads into
+  bin.staging, checks that `--version` exits 0, then swaps
+  folders. A failed download or check keeps the old binary.
+  The binary version is now read from plugin.json.
 
 ---
 
