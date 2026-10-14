@@ -133,6 +133,16 @@ public sealed class HydrationBuilderTests : IAsyncLifetime
         Assert.StartsWith("ContextOS workspace context", blob);
     }
 
+    [Fact]
+    public async Task BlobWithData_ContainsAnswerFromContextRule()
+    {
+        await Add("some decision", "decision");
+
+        string blob = await HydrationBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, gitInfo: null);
+
+        Assert.Contains(HydrationBuilder.AnswerFromContextRule, blob);
+    }
+
     // -------------------------------------------------------------------------
     // Size budget
     // -------------------------------------------------------------------------
@@ -155,6 +165,7 @@ public sealed class HydrationBuilderTests : IAsyncLifetime
 
         string blob = await HydrationBuilder.BuildAsync(_store, WorkspaceId, WorkspaceName, gitInfo);
 
+        Assert.Contains(HydrationBuilder.AnswerFromContextRule, blob);
         Assert.True(blob.Length <= 1000, $"Blob must be at most 1000 chars. Got {blob.Length}.\n---\n{blob}");
         Assert.True(Encoding.UTF8.GetByteCount(blob) <= 1000,
             $"Blob must be at most 1000 bytes. Got {Encoding.UTF8.GetByteCount(blob)} bytes.");

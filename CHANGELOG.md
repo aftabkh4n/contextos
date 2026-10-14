@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.2.2 -- 2026-10-14
+
+### Fixed
+- Claude explored the repo (git log, file listings, session
+  history) to answer "what was I working on?" even when the
+  answer was already in the hydration blob. The "answer from
+  context" rule now sits in the always-loaded hydration blob
+  (serverInfo.instructions) instead of only in SKILL.md, which
+  loads on demand.
+
+---
+
 ## v0.2.1 -- 2026-10-12
 
 ### Fixed

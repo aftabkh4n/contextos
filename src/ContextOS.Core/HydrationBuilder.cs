@@ -16,7 +16,16 @@ public static class HydrationBuilder
     public const string EmptyWorkspaceMessage =
         "ContextOS: no stored memory for this workspace. Do not search for prior work; tell the user nothing is recorded.";
 
-    private const string Framing = "ContextOS workspace context (auto-loaded):\n\n";
+    private const string Framing = "ContextOS workspace context (auto-loaded):\n" + AnswerFromContextRule + "\n\n";
+
+    /// <summary>
+    /// Always-loaded rule telling the agent to answer prior-work questions from this blob.
+    /// Lives here, not in SKILL.md, because skill bodies only load on demand.
+    /// </summary>
+    public const string AnswerFromContextRule =
+        "Use this context to answer questions about prior work, decisions or todos. " +
+        "Do not run git, list files, or read session history to answer them. " +
+        "Branch and recent commits are already listed here.";
 
     private const int MaxTotalBytes = 1000;
 
