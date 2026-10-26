@@ -98,6 +98,20 @@ Before tagging a release, run the checklist in
 [tests/manual/day-7-e2e.md](tests/manual/day-7-e2e.md). All four scenarios
 must pass. Document any failures before proceeding.
 
+## Release order
+
+The Claude Code plugin lives in
+[aftabkh4n/contextos-plugin](https://github.com/aftabkh4n/contextos-plugin)
+and downloads the binary from this repository's releases. Release in this
+order:
+
+1. Tag and publish the release here. Wait until its assets, including
+   `contextos-win-x64.zip`, are on the Releases page.
+2. In the plugin repo, bump `version` in `.claude-plugin/plugin.json` and
+   the `bin/<version>` folder in the MCP command, then push.
+
+The plugin repo's CI fails if step 2 happens before step 1.
+
 ---
 
 ## DECISIONS.md format

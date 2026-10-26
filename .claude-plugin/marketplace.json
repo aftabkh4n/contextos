@@ -9,7 +9,10 @@
     {
       "name": "contextos",
       "description": "Persistent engineering memory for AI coding agents",
-      "source": "./plugins/contextos"
+      "source": {
+        "source": "github",
+        "repo": "aftabkh4n/contextos-plugin"
+      }
     }
   ]
 }
