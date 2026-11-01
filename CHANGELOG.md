@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- `remember_skill` no longer writes the skill's name or tags to the log.
+  Like `remember`, it now logs only the memory id, the content length
+  and a short hash. A test checks that no skill text reaches the log.
+
+---
+
 ## v0.2.4 -- 2026-10-14
 
 ### Fixed

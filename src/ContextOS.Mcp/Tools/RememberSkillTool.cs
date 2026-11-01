@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using ContextOS.Core;
 using Microsoft.Extensions.Logging;
@@ -30,6 +32,7 @@ public sealed class RememberSkillTool(IMemoryStore store, WorkspaceContext ws, I
 
         string content = $"Skill: {name}\n\nSteps:\n{steps}\n\nOutcome: {outcome}";
 
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             Memory memory = await store.AddMemoryAsync(
@@ -41,9 +44,11 @@ public sealed class RememberSkillTool(IMemoryStore store, WorkspaceContext ws, I
                 decayDays: 0,
                 ct: ct);
 
+            // Like remember: log length and a short hash, never the skill text,
+            // name, or tags.
             logger.LogInformation(
-                "remember_skill: id={Id} name={Name} elapsed tags={Tags}",
-                memory.Id, name, tags);
+                "remember_skill: id={Id} length={Length} hash={Hash} elapsed={ElapsedMs}ms",
+                memory.Id, content.Length, ContentFingerprint(content), sw.ElapsedMilliseconds);
 
             return JsonSerializer.Serialize(new { id = memory.Id, message = $"Skill '{name}' remembered." });
         }
@@ -54,9 +59,12 @@ public sealed class RememberSkillTool(IMemoryStore store, WorkspaceContext ws, I
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "remember_skill: failed workspace={WorkspaceId} name={Name}",
-                ws.WorkspaceId, name);
+                "remember_skill: failed workspace={WorkspaceId} length={Length}",
+                ws.WorkspaceId, content.Length);
             throw new InvalidOperationException("Failed to store skill. Check the server logs for details.");
         }
     }
+
+    private static string ContentFingerprint(string s) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(s)))[..8].ToLowerInvariant();
 }

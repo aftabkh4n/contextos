@@ -5,6 +5,7 @@ using ContextOS.Mcp;
 using ContextOS.Mcp.Tools;
 using ContextOS.Retrieval;
 using ContextOS.Storage;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ContextOS.Tests;
@@ -173,6 +174,43 @@ public sealed class SkillTests : IAsyncLifetime
         Memory? after = await _store.GetMemoryByIdAsync(id);
         Assert.NotNull(after);
         Assert.Null(after.ArchivedAt);
+    }
+
+    // -------------------------------------------------------------------------
+    // remember_skill never logs the skill text (PRIVACY.md promise)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task RememberSkill_LogsLengthAndHash_NeverNameStepsOrTags()
+    {
+        var logger = new CapturingLogger<RememberSkillTool>();
+        var tool = new RememberSkillTool(
+            _store, new WorkspaceContext(Ws, "/test/skills"), logger);
+
+        await tool.RememberSkillAsync(
+            name: "rotate-secret-zebra",
+            steps: "1. open-vault-kiwi\n2. rotate",
+            outcome: "secret rotated mango",
+            tags: "tag-papaya,tag-lychee");
+
+        string all = string.Join("\n", logger.Messages);
+        Assert.Contains("remember_skill:", all);
+        Assert.Contains("hash=", all);
+        foreach (string secret in new[] { "zebra", "kiwi", "mango", "papaya", "lychee" })
+            Assert.DoesNotContain(secret, all);
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Messages.Add(formatter(state, exception));
     }
 }
 
