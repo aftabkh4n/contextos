@@ -63,6 +63,22 @@ After installing, register with Claude Code:
 claude mcp add --scope user contextos -- contextos
 ```
 
+**Docker** (amd64 and arm64):
+```bash
+docker build -t contextos https://github.com/aftabkh4n/contextos.git
+docker run -i --rm -v contextos-data:/data -v "$PWD":/workspace contextos
+```
+
+The image runs the server over stdio, so give it `-i`. Memories are stored in
+`/data`; keep the `contextos-data` volume to keep them between runs. Mount the
+project you want memories for at `/workspace`. The model is built into the
+image, so the server needs no network at runtime. A container cannot see which
+project Claude Code has open, so register it once per project, from that
+project's folder:
+```sh
+claude mcp add --scope project contextos -- docker run -i --rm -v contextos-data:/data -v "$PWD":/workspace contextos
+```
+
 <details>
 <summary>Manual install (advanced)</summary>
 

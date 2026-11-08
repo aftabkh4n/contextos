@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- A Dockerfile for running ContextOS in a container (amd64 and arm64). The
+  image bundles the ONNX model, runs as a non-root user, stores memories in
+  `/data` and treats `/workspace` as the project. It is about 510 MB and
+  answers `initialize` in about 1 second.
+
 ### Changed
 - `remember_skill` no longer writes the skill's name or tags to the log.
   Like `remember`, it now logs only the memory id, the content length
