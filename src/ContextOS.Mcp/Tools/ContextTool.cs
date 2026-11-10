@@ -9,9 +9,9 @@ namespace ContextOS.Mcp.Tools;
 public sealed class ContextTool(IMemoryStore store, WorkspaceContext ws, ILogger<ContextTool> logger)
 {
     [McpServerTool(Name = "context")]
-    [Description("Markdown summary of workspace context.")]
+    [Description("Read-only. Returns a Markdown summary of this workspace's memories. Use it when you need more than the summary injected at session start.")]
     public async Task<string> ContextAsync(
-        [Description("current, week, or all")] string scope = "current",
+        [Description("current (default): recent decisions, todos, skills and git state. week: memories from the last 7 days. all: every stored memory.")] string scope = "current",
         CancellationToken ct = default)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

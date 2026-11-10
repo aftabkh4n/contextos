@@ -213,6 +213,31 @@ public sealed class McpIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ToolsList_EveryToolAndParameterIsDescribed()
+    {
+        await DoInitHandshakeAsync();
+
+        using JsonDocument response = await SendRequestAsync("tools/list", new { });
+
+        JsonElement tools = response.RootElement.GetProperty("result").GetProperty("tools");
+        Assert.Equal(4, tools.GetArrayLength());
+        foreach (JsonElement tool in tools.EnumerateArray())
+        {
+            string name = tool.GetProperty("name").GetString()!;
+            string description = tool.GetProperty("description").GetString()!;
+            // A tool description says what it does and what it returns, not just a phrase.
+            Assert.True(description.Length >= 80, $"{name}: description too short: {description}");
+
+            foreach (JsonProperty param in tool.GetProperty("inputSchema").GetProperty("properties").EnumerateObject())
+            {
+                Assert.True(param.Value.TryGetProperty("description", out JsonElement d)
+                        && d.GetString()!.Length >= 10,
+                    $"{name}.{param.Name}: missing or too short description");
+            }
+        }
+    }
+
+    [Fact]
     public async Task ToolsList_ContainsContext()
     {
         await DoInitHandshakeAsync();

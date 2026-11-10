@@ -12,12 +12,12 @@ namespace ContextOS.Mcp.Tools;
 public sealed class RecallTool(ISearch search, WorkspaceContext ws, ILogger<RecallTool> logger)
 {
     [McpServerTool(Name = "recall")]
-    [Description("Hybrid search over stored memories.")]
+    [Description("Read-only. Searches stored memories by meaning and keywords, ranked by relevance, recency and importance. Use it before answering questions about past decisions or gotchas. Returns a JSON array of {id, type, content, score}; content is cut to 300 characters.")]
     public async Task<string> RecallAsync(
-        [Description("Search query")] string query,
-        [Description("Max results, 1-20")] int k = 5,
-        [Description("Types filter")] string[]? types = null,
-        [Description("current or global")] string scope = "current",
+        [Description("What to look for, in plain words")] string query,
+        [Description("Maximum results, 1 to 20 (default 5)")] int k = 5,
+        [Description("Only these types: note, decision, gotcha, todo, skill. Ignored when scope is global.")] string[]? types = null,
+        [Description("current (default): this workspace. global: every workspace on this machine; results include the workspace name.")] string scope = "current",
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query))
