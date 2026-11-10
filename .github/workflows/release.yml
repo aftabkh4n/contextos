@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write    # required to create GitHub Releases
+      id-token: write    # NuGet trusted publishing: GitHub OIDC token, no stored API key
 
     steps:
       - uses: actions/checkout@v4
@@ -109,6 +110,14 @@ jobs:
       - name: List nupkg artifacts
         run: ls -la dist/nupkg/
 
+      # Exchanges GitHub's OIDC token for a short-lived nuget.org key. Needs a
+      # trusted publishing policy on nuget.org for this repo and release.yml.
+      - name: NuGet login (trusted publishing)
+        id: nuget-login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: aftabkh4n
+
       - name: Push to NuGet
         run: |
           NUPKG=$(ls dist/nupkg/*.nupkg | head -1)
@@ -119,6 +128,6 @@ jobs:
             exit 1
           fi
           dotnet nuget push "$NUPKG" \
-            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
