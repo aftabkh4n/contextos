@@ -9,6 +9,11 @@
   answers `initialize` in about 1 second.
 
 ### Changed
+- Tool and parameter descriptions now say what each tool does, when to
+  use it, what it returns, and each parameter's range and default (for
+  example that recall's `types` filter is ignored for global search).
+  tools/list grows from 1,741 to 2,922 bytes (about 300 more tokens per
+  session). A test fails if a tool or parameter loses its description.
 - `remember_skill` no longer writes the skill's name or tags to the log.
   Like `remember`, it now logs only the memory id, the content length
   and a short hash. A test checks that no skill text reaches the log.
