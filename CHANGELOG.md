@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+---
+
+## v0.2.5 -- 2026-11-10
+
+### Fixed
+- LICENSE is now the unmodified Apache 2.0 text, so GitHub detects the
+  license as Apache-2.0 instead of Other. The copyright line moved to
+  NOTICE.
+
 ### Added
 - A Dockerfile for running ContextOS in a container (amd64 and arm64). The
   image bundles the ONNX model, runs as a non-root user, stores memories in
