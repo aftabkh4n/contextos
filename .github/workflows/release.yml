@@ -18,10 +18,10 @@ jobs:
       id-token: write    # NuGet trusted publishing: GitHub OIDC token, no stored API key
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '10.0.x'
 
@@ -30,7 +30,7 @@ jobs:
 
       - name: Cache embeddings model
         id: cache-model
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: src/ContextOS.Embeddings/Models
           key: minilm-l6-v2-onnx-v1
@@ -94,7 +94,7 @@ jobs:
         run: gh release delete "${{ steps.tag.outputs.value }}" --yes || true
 
       - name: Create GitHub Release and upload assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ steps.tag.outputs.value }}
           name: ContextOS ${{ steps.tag.outputs.value }}

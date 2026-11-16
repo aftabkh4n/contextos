@@ -6,7 +6,7 @@ namespace ContextOS.Tests;
 public sealed class OpenAiProviderTests
 {
     private const string Model  = "text-embedding-3-small";
-    private const string ApiKey = "sk-test-key";
+    private const string ApiKey = "fake-api-key-for-tests";
 
     private static OpenAiProvider Provider(FakeHttpMessageHandler h) =>
         new(Model, ApiKey, new HttpClient(h));
